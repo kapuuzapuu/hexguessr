@@ -316,7 +316,7 @@ body.modal-open .layout-container {
     margin: 0;                  /* layout-container already centered */
 
     gap: var(--spacing-2xl);
-    padding-top: var(--spacing-sm);
+    padding-top: var(--spacing-md);
 }
 
 .header-row {
@@ -347,7 +347,7 @@ body.modal-open .layout-container {
 
 .ascii-title {
     margin: 0;
-    font-family: monospace;
+    font-family: 'Courier New', Courier, monospace;
     white-space: pre;
     color: inherit;
     text-align: center;           /* was center */
