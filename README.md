@@ -124,4 +124,4 @@ No account system is required.
 ## Credits
 
 - Game design & development: [KapuuZapuu](https://github.com/kapuuzapuu)
-- Font: Press Start 2P
+- Fonts: Press Start 2P, IBM Plex Mono
