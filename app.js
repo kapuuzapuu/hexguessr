@@ -107,6 +107,7 @@ class HexColorWordle {
         
         // Track all guesses and their errors for statistics
         this.guessHistory = []; // Array of {hex, colorError}
+        this.postGameActionRow = null;
         
         // Check if daily puzzle is already completed
         if (this.mode === 'daily') {
@@ -186,6 +187,8 @@ class HexColorWordle {
         this.rowLabels = [];
         this.rowActions = [];
         this.pasteButtons = [];
+        this.rowActionModes = [];
+        this.rowActionIcons = [];
         for (let r = 0; r < this.gridRows; r++) {
             const rowEl = document.createElement('div');
             rowEl.className = 'hex-grid-row';
@@ -222,6 +225,8 @@ class HexColorWordle {
             rowEl.appendChild(action);
             this.rowActions.push(action);
             this.pasteButtons.push(pasteBtn);
+            this.rowActionModes.push('paste');
+            this.rowActionIcons.push(use);
 
             this.gridEl.appendChild(rowEl);
             this.gridCellRefs.push(rowCells);
@@ -317,6 +322,70 @@ class HexColorWordle {
             this.updateCaret();
             safeFocus(this.gridEl);
         } catch (err) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Clipboard access failed');
+            }
+        }
+    }
+
+    getShareDateText() {
+        const fallback = new Date();
+        const source = this.mode === 'daily' ? this.dailyPuzzleDate : null;
+        const ymdMatch = typeof source === 'string'
+            ? source.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+            : null;
+
+        if (ymdMatch) {
+            const [, year, month, day] = ymdMatch;
+            return `${month}/${day}/${year}`;
+        }
+
+        const month = String(fallback.getMonth() + 1).padStart(2, '0');
+        const day = String(fallback.getDate()).padStart(2, '0');
+        const year = String(fallback.getFullYear());
+        return `${month}/${day}/${year}`;
+    }
+
+    buildShareResultsText() {
+        const modeLabel = this.mode === 'daily' ? 'DAILY' : 'UNLIMITED';
+        const dateLabel = this.getShareDateText();
+        const statusToEmoji = {
+            correct: '🟩',
+            close: '🟨',
+            wrong: '⬜️'
+        };
+
+        const guessLines = this.guessHistory
+            .filter((entry) => entry && typeof entry.hex === 'string' && entry.hex.length === 6)
+            .map((entry) => this.getStatusesForGuess(entry.hex.toUpperCase())
+                .map((status) => statusToEmoji[status] || statusToEmoji.wrong)
+                .join(''));
+
+        return `HexGuessr - ${modeLabel} - ${dateLabel}\n\n${guessLines.join('\n')}\n\nhttps://hexguessr.com`;
+    }
+
+    async copyShareResults() {
+        const text = this.buildShareResultsText();
+
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                try { ta.focus({ preventScroll: true }); } catch { ta.focus(); }
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+
+            if (typeof window.showToast === 'function') {
+                window.showToast('Game results copied!');
+            }
+        } catch {
             if (typeof window.showToast === 'function') {
                 window.showToast('Clipboard access failed');
             }
@@ -435,14 +504,34 @@ class HexColorWordle {
     
     updatePasteAction() {
         this.rowActions.forEach((el, idx) => {
-            // Hide paste button if game is over, otherwise show for current row
-            el.classList.toggle('visible', idx === this.currentRow && !this.gameOver);
+            const isCurrentRow = idx === this.currentRow;
+            const isPostGameRow = this.postGameActionRow !== null && idx === this.postGameActionRow;
+            el.classList.toggle('visible', this.gameOver ? isPostGameRow : isCurrentRow);
         });
     }
+
+    setRowActionMode(rowIndex, mode) {
+        const btn = this.pasteButtons[rowIndex];
+        const iconUse = this.rowActionIcons[rowIndex];
+        if (!btn || !iconUse) return;
+
+        const normalizedMode = mode === 'share' ? 'share' : 'paste';
+        this.rowActionModes[rowIndex] = normalizedMode;
+        btn.setAttribute('aria-label', normalizedMode === 'share' ? 'Share' : 'Paste');
+        iconUse.setAttribute('href', normalizedMode === 'share' ? '#icon-share' : '#icon-paste');
+    }
+
     attachPasteHandlers() {
         this.pasteButtons.forEach((btn, idx) => {
             btn.onclick = async () => {
-                if (this.gameOver || this.isAnimating || idx !== this.currentRow) return;
+                if (this.gameOver) {
+                    const isShareButton = this.rowActionModes[idx] === 'share';
+                    if (idx !== this.postGameActionRow || !isShareButton) return;
+                    await this.copyShareResults();
+                    return;
+                }
+
+                if (this.isAnimating || idx !== this.currentRow || this.rowActionModes[idx] !== 'paste') return;
                 await this.handlePaste();
             };
         });
@@ -1070,7 +1159,8 @@ class HexColorWordle {
     }
 
     showColor() {
-        if (this.colorVisible || this.gameOver || this.hasRevealedThisAttempt) return;
+        // Prevent reveal during row-reveal animation/settle window so attempt timing stays correct.
+        if (this.colorVisible || this.gameOver || this.hasRevealedThisAttempt || this.isAnimating) return;
                 
         this.colorVisible = true;
         this.hasRevealedThisAttempt = true;
@@ -1168,6 +1258,7 @@ class HexColorWordle {
             hex: guess,
             colorError: colorError
         });
+        const submittedRow = this.currentRow;
 
         // lock the row UI
         this.lockCurrentRow();
@@ -1177,9 +1268,17 @@ class HexColorWordle {
                 
         // Process the guess animation first
         this.processGuess(guess);
+
+        // Persist submitted guess immediately so leaving/reloading during the
+        // reveal-settle delay does not drop progress in daily mode.
+        if (this.mode === 'daily') {
+            this.saveDailyGameState();
+        }
         
         // Reset reveal ability for next attempt AFTER animation completes
-        // Animation timing: last cell starts at 5*140ms=700ms, animation duration is 360ms = 1060ms total
+        // Animation timing: last cell starts at 5*140ms=700ms, animation duration is 360ms = 1060ms total.
+        // Use a small buffer so row indicators/paste advance only after reveal settles.
+        const rowRevealSettleDelay = 1100;
         setTimeout(() => {
             this.isAnimating = false; // Allow input again
             if (!this.gameOver) {
@@ -1191,32 +1290,28 @@ class HexColorWordle {
                     this.timerFill.style.transition = '';
                     this.timerFill.style.transform = 'scaleX(1)';
                 }
+                // Progress attempt/UI only after reveal animation settles so
+                // there is no early cue before row transition.
+                this.currentAttempt++;
+                if (this.currentAttemptSpan) {
+                    this.currentAttemptSpan.textContent = this.currentAttempt;
+                }
+                this.clearCurrentRowBuffer();
                 // Persist the reset reveal-state for daily mode so reload doesn't
                 // incorrectly show "Submit a guess to reveal again!".
                 if (this.mode === 'daily') {
                     this.saveDailyGameState();
                 }
             }
-        }, 1100); // Wait for all animations to complete
-        this.colorizeRowLabel(this.currentRow, guess);
-        this.clearCurrentRowBuffer();
+        }, rowRevealSettleDelay); // Wait for reveal animation to complete before row transition
+        this.colorizeRowLabel(submittedRow, guess);
         
         if (guess === this.targetColor) {
-            this.endGame(true);
+            this.endGame(true, submittedRow, rowRevealSettleDelay);
         } 
         else if (this.currentAttempt >= this.maxAttempts) {
-            this.endGame(false);
+            this.endGame(false, submittedRow, rowRevealSettleDelay);
         } 
-        else {
-            this.currentAttempt++;
-            if (this.currentAttemptSpan) {
-                this.currentAttemptSpan.textContent = this.currentAttempt;
-            }
-            if (this.mode === 'daily') {
-                // Persist only after attempt progression is finalized.
-                this.saveDailyGameState();
-            }
-        }
     }
 
     processGuess(guess) {
@@ -1303,20 +1398,34 @@ class HexColorWordle {
                 }
             }, col * perColumnDelay);
         }
+
+        const lastColumnDelay = (this.gridCols - 1) * perColumnDelay;
+        return lastColumnDelay + holdDuration;
     }
 
-    endGame(won) {
+    endGame(won, finalRowIndex = null, postSubmitDelay = 1100) {
         this.gameOver = true;
+        if (Number.isInteger(finalRowIndex)) {
+            this.postGameActionRow = Math.max(0, Math.min(this.gridRows - 1, finalRowIndex));
+        } else if (this.guessHistory.length > 0) {
+            this.postGameActionRow = Math.max(0, Math.min(this.gridRows - 1, this.guessHistory.length - 1));
+        } else {
+            this.postGameActionRow = null;
+        }
+
+        if (this.postGameActionRow !== null) {
+            this.setRowActionMode(this.postGameActionRow, 'paste');
+        }
+
         this.clearActiveRowIndicators();
         // Always empty the timer bar when game ends
         this.timerFill.style.transition = '';
         this.timerFill.style.transform = 'scaleX(0)';
-        // Hide paste actions
+        // Keep row action on the submitted row, then swap to share after end animations.
         this.updatePasteAction();
         
-        // Calculate animation completion time
-        // 6 cells × 140ms delay + 360ms animation = ~1200ms total
-        const animationDelay = (6 * 140) + 360 + 100; // Add 100ms buffer
+        // Wait for submitted row reveal animation completion before end-game UI swap.
+        const animationDelay = Math.max(0, postSubmitDelay | 0);
         
         // Delay color reveal until animations complete
         setTimeout(() => {
@@ -1324,14 +1433,18 @@ class HexColorWordle {
             this.colorDisplay.classList.remove('hidden', 'disabled'); // Remove disabled to prevent gray text
             this.colorDisplay.textContent = `#${this.targetColor}`;
             this.colorDisplay.classList.add('game-ended');
-            
-            // Save state after setting the color
-            if (this.mode === 'daily') {
-                this.saveDailyGameState();
+
+            if (this.postGameActionRow !== null) {
+                this.setRowActionMode(this.postGameActionRow, 'share');
+                this.updatePasteAction();
             }
 
             if (won) {
                 this.playWinGridSweep();
+            }
+
+            if (this.mode === 'daily') {
+                this.saveDailyGameState();
             }
             
             // Show random win/loss message
@@ -1478,6 +1591,7 @@ class HexColorWordle {
         this.hasRevealedThisAttempt = false;
         this.isAnimating = false; // Reset animation flag
         this.guessHistory = []; // Reset guess history for new game
+        this.postGameActionRow = null;
                 
         this.colorDisplay.classList.add('hidden');
         this.colorDisplay.classList.remove('disabled');
@@ -1541,6 +1655,7 @@ class HexColorWordle {
             colorVisible: this.colorVisible,
             hasRevealedThisAttempt: this.isAnimating ? false : this.hasRevealedThisAttempt,
             guessHistory: this.guessHistory,
+            postGameActionRow: this.postGameActionRow,
             gridState: [] // Store the visual grid state
         };
         
@@ -1593,6 +1708,9 @@ class HexColorWordle {
             this.colorVisible = gameState.colorVisible || false;
             this.hasRevealedThisAttempt = gameState.hasRevealedThisAttempt || false;
             this.guessHistory = gameState.guessHistory || [];
+            this.postGameActionRow = Number.isInteger(gameState.postGameActionRow)
+                ? Math.max(0, Math.min(this.gridRows - 1, gameState.postGameActionRow))
+                : null;
 
             // Defensive normalization: derive active position from submitted guesses.
             // This prevents stale saved attempt/cursor values from breaking end-game flow.
@@ -1600,6 +1718,7 @@ class HexColorWordle {
                 this.currentAttempt = Math.min(this.maxAttempts, this.guessHistory.length + 1);
                 this.currentRow = Math.min(this.gridRows - 1, this.guessHistory.length);
                 this.currentCol = 0;
+                this.postGameActionRow = null;
             }
             
             // Restore grid visual state
@@ -1658,6 +1777,13 @@ class HexColorWordle {
             
             // Restore color display state
             if (this.gameOver) {
+                if (this.postGameActionRow === null && this.guessHistory.length > 0) {
+                    this.postGameActionRow = Math.max(0, Math.min(this.gridRows - 1, this.guessHistory.length - 1));
+                }
+                if (this.postGameActionRow !== null) {
+                    this.setRowActionMode(this.postGameActionRow, 'share');
+                }
+
                 this.colorDisplay.textContent = '#' + this.targetColor;
                 this.colorDisplay.style.background = '#' + this.targetColor;
                 this.colorDisplay.classList.remove('hidden');
@@ -1666,7 +1792,7 @@ class HexColorWordle {
                 // Ensure timer bar and text are empty for completed games
                 this.timerFill.style.transition = '';
                 this.timerFill.style.transform = 'scaleX(0)';
-                // Hide paste button for completed games
+                // Show share button on the submitted/final row for completed games
                 this.updatePasteAction();
             } else if (this.colorVisible) {
                 // Color was being shown when user left - hide it but keep revealed state
@@ -1814,9 +1940,47 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // --- Toast Notification System ---
     const toastContainer = document.getElementById('toastContainer');
+
+    let toastSyncRaf = 0;
+    let lastToastTop = '';
+
+    const syncToastViewportOffset = () => {
+        if (!toastContainer) return;
+
+        const vv = window.visualViewport;
+        const offsetTop = vv ? Math.max(0, vv.offsetTop || 0) : 0;
+        const topValue = `calc(var(--toast-top) + env(safe-area-inset-top, 0px) + ${offsetTop}px)`;
+
+        if (topValue !== lastToastTop) {
+            toastContainer.style.top = topValue;
+            lastToastTop = topValue;
+        }
+    };
+
+    const queueToastViewportSync = () => {
+        if (toastSyncRaf) return;
+        toastSyncRaf = requestAnimationFrame(() => {
+            toastSyncRaf = 0;
+            syncToastViewportOffset();
+        });
+    };
+
+    syncToastViewportOffset();
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', queueToastViewportSync, { passive: true });
+        window.visualViewport.addEventListener('scroll', queueToastViewportSync, { passive: true });
+    }
+    // Chrome fallback: window scroll can fire while top-controls animation is in flight.
+    window.addEventListener('scroll', queueToastViewportSync, { passive: true });
+    window.addEventListener('orientationchange', () => {
+        queueToastViewportSync();
+        requestAnimationFrame(queueToastViewportSync);
+        setTimeout(syncToastViewportOffset, 120);
+    }, { passive: true });
     
     function showToast(message, duration = 2000) {
         if (!toastContainer) return;
+        syncToastViewportOffset();
         
         const toast = document.createElement('div');
         toast.className = 'toast';

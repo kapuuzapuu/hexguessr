@@ -1407,6 +1407,8 @@ html.dark .row-label.colored {
 .toast-container {
     position: fixed;
     top: var(--toast-top);
+    top: calc(var(--toast-top) + constant(safe-area-inset-top));
+    top: calc(var(--toast-top) + env(safe-area-inset-top, 0px));
     left: 50%;
     transform: translateX(-50%);
     z-index: 2000;
