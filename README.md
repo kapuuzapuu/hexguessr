@@ -10,7 +10,7 @@ HexGuessr combines Wordle-style per-character feedback with a live color picker 
 
 ## Gameplay
 
-- Guess a 6-digit hex color (`000000` to `FFFFFF`) in up to 6 attempts.
+- Guess a 6-digit hex color (`#000000` to `#FFFFFF`) in up to 6 attempts.
 - Use the reveal square once per attempt to briefly preview the target color.
 - Refine guesses using the color canvas, hue slider, and hex input field.
 - Submit guesses into the 6x6 grid.
