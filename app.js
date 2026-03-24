@@ -329,6 +329,7 @@ class HexColorWordle {
     }
 
     getShareDateText() {
+        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const fallback = new Date();
         const source = this.mode === 'daily' ? this.dailyPuzzleDate : null;
         const ymdMatch = typeof source === 'string'
@@ -337,18 +338,22 @@ class HexColorWordle {
 
         if (ymdMatch) {
             const [, year, month, day] = ymdMatch;
-            return `${month}/${day}/${year}`;
+            const monthIndex = Number(month) - 1;
+            const monthLabel = monthLabels[monthIndex] || monthLabels[fallback.getMonth()];
+            return `${monthLabel}/${day}/${year}`;
         }
 
-        const month = String(fallback.getMonth() + 1).padStart(2, '0');
+        const month = monthLabels[fallback.getMonth()];
         const day = String(fallback.getDate()).padStart(2, '0');
         const year = String(fallback.getFullYear());
         return `${month}/${day}/${year}`;
     }
 
     buildShareResultsText() {
-        const modeLabel = this.mode === 'daily' ? 'DAILY' : 'UNLIMITED';
+        const modeLabel = this.mode === 'daily' ? 'Daily' : 'Unlimited';
         const dateLabel = this.getShareDateText();
+        const attemptsUsed = Math.min(this.guessHistory.length, this.maxAttempts);
+        const attemptsLabel = `${attemptsUsed}/${this.maxAttempts} Attempts`;
         const statusToEmoji = {
             correct: '🟩',
             close: '🟨',
@@ -361,7 +366,7 @@ class HexColorWordle {
                 .map((status) => statusToEmoji[status] || statusToEmoji.wrong)
                 .join(''));
 
-        return `HexGuessr - ${modeLabel} - ${dateLabel}\n\n${guessLines.join('\n')}\n\nhttps://hexguessr.com`;
+        return `HexGuessr - ${modeLabel}\n${dateLabel}\n${attemptsLabel}\n\n${guessLines.join('\n')}\n\nhttps://hexguessr.com`;
     }
 
     async copyShareResults() {
@@ -1944,11 +1949,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     let toastSyncRaf = 0;
     let lastToastTop = '';
 
+    const getToastViewportOffsetTop = () => {
+        const vv = window.visualViewport;
+        if (!vv) return 0;
+
+        // Only compensate when the software keyboard is likely open.
+        // This prevents rubber-band/overscroll from pushing toasts.
+        const delta = window.innerHeight - vv.height;
+        const threshold = Math.max(100, window.innerHeight * 0.15);
+        const isKeyboardOpen = delta > threshold;
+        if (!isKeyboardOpen) return 0;
+
+        return Math.max(0, Number(vv.offsetTop) || 0);
+    };
+
     const syncToastViewportOffset = () => {
         if (!toastContainer) return;
 
-        const vv = window.visualViewport;
-        const offsetTop = vv ? Math.max(0, vv.offsetTop || 0) : 0;
+        const offsetTop = getToastViewportOffsetTop();
         const topValue = `calc(var(--toast-top) + env(safe-area-inset-top, 0px) + ${offsetTop}px)`;
 
         if (topValue !== lastToastTop) {
@@ -1970,8 +1988,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.visualViewport.addEventListener('resize', queueToastViewportSync, { passive: true });
         window.visualViewport.addEventListener('scroll', queueToastViewportSync, { passive: true });
     }
-    // Chrome fallback: window scroll can fire while top-controls animation is in flight.
-    window.addEventListener('scroll', queueToastViewportSync, { passive: true });
     window.addEventListener('orientationchange', () => {
         queueToastViewportSync();
         requestAnimationFrame(queueToastViewportSync);
