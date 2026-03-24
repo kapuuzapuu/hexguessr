@@ -1953,14 +1953,29 @@ window.addEventListener('DOMContentLoaded', async () => {
         const vv = window.visualViewport;
         if (!vv) return 0;
 
-        // Only compensate when the software keyboard is likely open.
-        // This prevents rubber-band/overscroll from pushing toasts.
-        const delta = window.innerHeight - vv.height;
-        const threshold = Math.max(100, window.innerHeight * 0.15);
-        const isKeyboardOpen = delta > threshold;
-        if (!isKeyboardOpen) return 0;
+        const rawOffsetTop = Math.max(0, Number(vv.offsetTop) || 0);
+        if (rawOffsetTop <= 0) return 0;
 
-        return Math.max(0, Number(vv.offsetTop) || 0);
+        const cappedOffsetTop = Math.min(rawOffsetTop, window.innerHeight * 0.45);
+
+        // Primary: detect bounce directly when pageTop is available.
+        const pageTop = Number(vv.pageTop);
+        if (Number.isFinite(pageTop)) {
+            const scrollingEl = document.scrollingElement || document.documentElement;
+            if (!scrollingEl) return cappedOffsetTop;
+
+            const maxScrollY = Math.max(0, scrollingEl.scrollHeight - window.innerHeight);
+            if (pageTop < -1 || pageTop > maxScrollY + 1) return 0;
+
+            return cappedOffsetTop;
+        }
+
+        // Fallback: infer keyboard-open state when pageTop is unavailable.
+        const delta = Math.max(0, window.innerHeight - vv.height);
+        const threshold = Math.max(100, window.innerHeight * 0.20);
+        if (delta <= threshold) return 0;
+
+        return cappedOffsetTop;
     };
 
     const syncToastViewportOffset = () => {
@@ -1988,6 +2003,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.visualViewport.addEventListener('resize', queueToastViewportSync, { passive: true });
         window.visualViewport.addEventListener('scroll', queueToastViewportSync, { passive: true });
     }
+    // Chrome fallback: top-controls transitions can produce window scroll
+    // changes while visualViewport events are in flight.
+    window.addEventListener('scroll', queueToastViewportSync, { passive: true });
     window.addEventListener('orientationchange', () => {
         queueToastViewportSync();
         requestAnimationFrame(queueToastViewportSync);
