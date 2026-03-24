@@ -329,7 +329,6 @@ class HexColorWordle {
     }
 
     getShareDateText() {
-        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const fallback = new Date();
         const source = this.mode === 'daily' ? this.dailyPuzzleDate : null;
         const ymdMatch = typeof source === 'string'
@@ -338,22 +337,18 @@ class HexColorWordle {
 
         if (ymdMatch) {
             const [, year, month, day] = ymdMatch;
-            const monthIndex = Number(month) - 1;
-            const monthLabel = monthLabels[monthIndex] || monthLabels[fallback.getMonth()];
-            return `${monthLabel}/${day}/${year}`;
+            return `${month}/${day}/${year}`;
         }
 
-        const month = monthLabels[fallback.getMonth()];
+        const month = String(fallback.getMonth() + 1).padStart(2, '0');
         const day = String(fallback.getDate()).padStart(2, '0');
         const year = String(fallback.getFullYear());
         return `${month}/${day}/${year}`;
     }
 
     buildShareResultsText() {
-        const modeLabel = this.mode === 'daily' ? 'Daily' : 'Unlimited';
+        const modeLabel = this.mode === 'daily' ? 'DAILY' : 'UNLIMITED';
         const dateLabel = this.getShareDateText();
-        const attemptsUsed = Math.min(this.guessHistory.length, this.maxAttempts);
-        const attemptsLabel = `${attemptsUsed}/${this.maxAttempts} Attempts`;
         const statusToEmoji = {
             correct: '🟩',
             close: '🟨',
@@ -366,7 +361,7 @@ class HexColorWordle {
                 .map((status) => statusToEmoji[status] || statusToEmoji.wrong)
                 .join(''));
 
-        return `HexGuessr - ${modeLabel}\n${dateLabel}\n${attemptsLabel}\n\n${guessLines.join('\n')}\n\nhttps://hexguessr.com`;
+        return `HexGuessr - ${modeLabel} - ${dateLabel}\n\n${guessLines.join('\n')}\n\nhttps://hexguessr.com`;
     }
 
     async copyShareResults() {
@@ -1949,39 +1944,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     let toastSyncRaf = 0;
     let lastToastTop = '';
 
-    const getToastViewportOffsetTop = () => {
-        const vv = window.visualViewport;
-        if (!vv) return 0;
-
-        const rawOffsetTop = Math.max(0, Number(vv.offsetTop) || 0);
-        if (rawOffsetTop <= 0) return 0;
-
-        const cappedOffsetTop = Math.min(rawOffsetTop, window.innerHeight * 0.45);
-
-        // Primary: detect bounce directly when pageTop is available.
-        const pageTop = Number(vv.pageTop);
-        if (Number.isFinite(pageTop)) {
-            const scrollingEl = document.scrollingElement || document.documentElement;
-            if (!scrollingEl) return cappedOffsetTop;
-
-            const maxScrollY = Math.max(0, scrollingEl.scrollHeight - window.innerHeight);
-            if (pageTop < -1 || pageTop > maxScrollY + 1) return 0;
-
-            return cappedOffsetTop;
-        }
-
-        // Fallback: infer keyboard-open state when pageTop is unavailable.
-        const delta = Math.max(0, window.innerHeight - vv.height);
-        const threshold = Math.max(100, window.innerHeight * 0.20);
-        if (delta <= threshold) return 0;
-
-        return cappedOffsetTop;
-    };
-
     const syncToastViewportOffset = () => {
         if (!toastContainer) return;
 
-        const offsetTop = getToastViewportOffsetTop();
+        const vv = window.visualViewport;
+        const offsetTop = vv ? Math.max(0, vv.offsetTop || 0) : 0;
         const topValue = `calc(var(--toast-top) + env(safe-area-inset-top, 0px) + ${offsetTop}px)`;
 
         if (topValue !== lastToastTop) {
@@ -2003,8 +1970,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.visualViewport.addEventListener('resize', queueToastViewportSync, { passive: true });
         window.visualViewport.addEventListener('scroll', queueToastViewportSync, { passive: true });
     }
-    // Chrome fallback: top-controls transitions can produce window scroll
-    // changes while visualViewport events are in flight.
+    // Chrome fallback: window scroll can fire while top-controls animation is in flight.
     window.addEventListener('scroll', queueToastViewportSync, { passive: true });
     window.addEventListener('orientationchange', () => {
         queueToastViewportSync();
