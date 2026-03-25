@@ -1948,6 +1948,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     let toastSyncRaf = 0;
     let lastToastTop = '';
+    let toastBounceLocked = false;
+    const TOAST_BOUNCE_ENTER_PX = 2;
+    const TOAST_BOUNCE_EXIT_PX = 10;
 
     const getToastViewportOffsetTop = () => {
         const vv = window.visualViewport;
@@ -1965,10 +1968,27 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (!scrollingEl) return cappedOffsetTop;
 
             const maxScrollY = Math.max(0, scrollingEl.scrollHeight - window.innerHeight);
-            if (pageTop < -1 || pageTop > maxScrollY + 1) return 0;
+
+            const outsideBounceBounds =
+                pageTop < -TOAST_BOUNCE_ENTER_PX ||
+                pageTop > maxScrollY + TOAST_BOUNCE_ENTER_PX;
+            const insideSettledBounds =
+                pageTop >= -TOAST_BOUNCE_EXIT_PX &&
+                pageTop <= maxScrollY + TOAST_BOUNCE_EXIT_PX;
+
+            if (!toastBounceLocked && outsideBounceBounds) {
+                toastBounceLocked = true;
+            } else if (toastBounceLocked && insideSettledBounds) {
+                toastBounceLocked = false;
+            }
+
+            if (toastBounceLocked) return 0;
 
             return cappedOffsetTop;
         }
+
+        // pageTop unavailable: avoid stale lock carrying forward.
+        toastBounceLocked = false;
 
         // Fallback: infer keyboard-open state when pageTop is unavailable.
         const delta = Math.max(0, window.innerHeight - vv.height);
@@ -2002,11 +2022,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', queueToastViewportSync, { passive: true });
         window.visualViewport.addEventListener('scroll', queueToastViewportSync, { passive: true });
+    } else {
+        // Fallback only when visualViewport is unavailable.
+        window.addEventListener('scroll', queueToastViewportSync, { passive: true });
     }
-    // Chrome fallback: top-controls transitions can produce window scroll
-    // changes while visualViewport events are in flight.
-    window.addEventListener('scroll', queueToastViewportSync, { passive: true });
     window.addEventListener('orientationchange', () => {
+        toastBounceLocked = false;
         queueToastViewportSync();
         requestAnimationFrame(queueToastViewportSync);
         setTimeout(syncToastViewportOffset, 120);
