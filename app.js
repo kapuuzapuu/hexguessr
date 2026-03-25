@@ -1967,14 +1967,15 @@ window.addEventListener('DOMContentLoaded', async () => {
             const scrollingEl = document.scrollingElement || document.documentElement;
             if (!scrollingEl) return cappedOffsetTop;
 
-            const maxScrollY = Math.max(0, scrollingEl.scrollHeight - window.innerHeight);
+            const visualHeight = Math.max(0, Number(vv.height) || window.innerHeight);
+            const maxPageTop = Math.max(0, scrollingEl.scrollHeight - visualHeight);
 
             const outsideBounceBounds =
                 pageTop < -TOAST_BOUNCE_ENTER_PX ||
-                pageTop > maxScrollY + TOAST_BOUNCE_ENTER_PX;
+                pageTop > maxPageTop + TOAST_BOUNCE_ENTER_PX;
             const insideSettledBounds =
                 pageTop >= -TOAST_BOUNCE_EXIT_PX &&
-                pageTop <= maxScrollY + TOAST_BOUNCE_EXIT_PX;
+                pageTop <= maxPageTop + TOAST_BOUNCE_EXIT_PX;
 
             if (!toastBounceLocked && outsideBounceBounds) {
                 toastBounceLocked = true;
