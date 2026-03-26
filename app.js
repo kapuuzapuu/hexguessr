@@ -91,6 +91,32 @@ async function fetchDailyPuzzle() {
 
 // --- End of helper functions ---
 
+// Tracks pending auto-popups so a manual open can cancel only the next
+// scheduled auto-open for that same flow.
+const autoPopupBypassState = {
+    onboardingHelpAuto: { pending: false, suppressNext: false },
+    statsOnLoadAuto: { pending: false, suppressNext: false },
+    statsEndgameAuto: { pending: false, suppressNext: false }
+};
+
+function markAutoPopupBypassed(channel) {
+    const state = autoPopupBypassState[channel];
+    if (!state) return;
+    if (state.pending) {
+        state.suppressNext = true;
+    }
+}
+
+function shouldSuppressAutoPopup(channel) {
+    const state = autoPopupBypassState[channel];
+    if (!state) return false;
+    if (state.suppressNext) {
+        state.suppressNext = false;
+        return true;
+    }
+    return false;
+}
+
 class HexColorWordle {
     constructor(opts = {}) {
         this.mode = opts.mode || 'unlimited';
@@ -150,11 +176,15 @@ class HexColorWordle {
         
         // Show stats modal if daily puzzle already completed
         if (this.dailyAlreadyCompleted) {
+            const autoChannel = 'statsOnLoadAuto';
+            autoPopupBypassState[autoChannel].pending = true;
             setTimeout(() => {
+                autoPopupBypassState[autoChannel].pending = false;
+                if (shouldSuppressAutoPopup(autoChannel)) return;
                 if (typeof window.showStatsModal === 'function') {
                     window.showStatsModal(true); // true = already completed
                 }
-            }, 2000); // Small delay for page load
+            }, 1500); // Small delay for page load
         }
     }
 
@@ -1423,9 +1453,6 @@ class HexColorWordle {
         }
 
         this.clearActiveRowIndicators();
-        // Always empty the timer bar when game ends
-        this.timerFill.style.transition = '';
-        this.timerFill.style.transform = 'scaleX(0)';
         // Keep row action on the submitted row, then swap to share after end animations.
         this.updatePasteAction();
         
@@ -1438,6 +1465,10 @@ class HexColorWordle {
             this.colorDisplay.classList.remove('hidden', 'disabled'); // Remove disabled to prevent gray text
             this.colorDisplay.textContent = `#${this.targetColor}`;
             this.colorDisplay.classList.add('game-ended');
+
+            // Empty timer when end-game UI is shown (same moment share appears).
+            this.timerFill.style.transition = '';
+            this.timerFill.style.transform = 'scaleX(0)';
 
             if (this.postGameActionRow !== null) {
                 this.setRowActionMode(this.postGameActionRow, 'share');
@@ -1459,7 +1490,11 @@ class HexColorWordle {
             }
             
             // Show stats modal after a short delay
+            const autoChannel = 'statsEndgameAuto';
+            autoPopupBypassState[autoChannel].pending = true;
             setTimeout(() => {
+                autoPopupBypassState[autoChannel].pending = false;
+                if (shouldSuppressAutoPopup(autoChannel)) return;
                 if (typeof window.showStatsModal === 'function') {
                     // In daily mode, pass true to show timer instead of play button
                     const isDailyCompleted = this.mode === 'daily';
@@ -2322,12 +2357,16 @@ window.addEventListener('DOMContentLoaded', async () => {
                 </div>
         `;
         openModal(helpContent);
+        localStorage.setItem('onboardingHelpSeen', '1');
     }
 
     // Info/Help button
     const infoBtn = document.getElementById('infoButton');
     if (infoBtn) {
-        infoBtn.addEventListener('click', openHelpModal);
+        infoBtn.addEventListener('click', () => {
+            markAutoPopupBypassed('onboardingHelpAuto');
+            openHelpModal();
+        });
     }
 
     // Show onboarding help once for first-time users (no gameplay save data yet).
@@ -2340,11 +2379,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         localStorage.getItem('gameStats_unlimited')
     );
     if (!hasSeenOnboardingHelp && !hasGameplaySaveData) {
+        const autoChannel = 'onboardingHelpAuto';
+        autoPopupBypassState[autoChannel].pending = true;
         // Small delay so the first-load modal feels less abrupt.
         setTimeout(() => {
+            autoPopupBypassState[autoChannel].pending = false;
+            if (shouldSuppressAutoPopup(autoChannel)) return;
             if (!document.body.classList.contains('modal-open')) {
                 openHelpModal();
-                localStorage.setItem(onboardingHelpSeenKey, '1');
             }
         }, 1000);
     }
@@ -2353,6 +2395,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const statsBtn = document.getElementById('statsButton');
     if (statsBtn) {
         statsBtn.addEventListener('click', () => {
+            markAutoPopupBypassed('statsOnLoadAuto');
+            markAutoPopupBypassed('statsEndgameAuto');
             // Check if daily mode game is completed (either loaded as completed or just finished)
             const isDailyCompleted = window.gameInstance?.mode === 'daily' && window.gameInstance?.gameOver;
             showStatsModal(isDailyCompleted);
