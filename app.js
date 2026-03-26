@@ -268,8 +268,10 @@ class HexColorWordle {
         this.attachRowLabelHandlers();
         // focus handling: click grid focuses keyboard capture
         this.gridEl.tabIndex = 0;
-        this.gridEl.addEventListener('focus', () => { this.gridFocused = true; });
-        this.gridEl.addEventListener('blur',  () => { this.gridFocused = false; });
+        this.gridEl.removeEventListener('focus', this.handleGridFocus);
+        this.gridEl.removeEventListener('blur', this.handleGridBlur);
+        this.gridEl.addEventListener('focus', this.handleGridFocus);
+        this.gridEl.addEventListener('blur', this.handleGridBlur);
         // paste event listener for all paste operations (Ctrl+V, right-click, menu, etc.)
         // Remove old listener first to prevent duplicates
         this.gridEl.removeEventListener('paste', this.handlePaste);
@@ -356,6 +358,14 @@ class HexColorWordle {
                 window.showToast('Clipboard access failed');
             }
         }
+    }
+
+    handleGridFocus = () => {
+        this.gridFocused = true;
+    }
+
+    handleGridBlur = () => {
+        this.gridFocused = false;
     }
 
     getShareDateText() {
