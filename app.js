@@ -526,7 +526,10 @@ class HexColorWordle {
         if (this.currentRow < this.rowLabels.length) {
             const lbl = this.rowLabels[this.currentRow];
             lbl.classList.add('visible');
-            lbl.style.color = ''; // reset to default
+            // Keep applied guess colors intact; only reset plain active labels.
+            if (!lbl.classList.contains('colored')) {
+                lbl.style.color = ''; // reset to default
+            }
         }
     }
 
