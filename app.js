@@ -397,7 +397,7 @@ class HexColorWordle {
         const statusToEmoji = {
             correct: '🟩',
             close: '🟨',
-            wrong: '⬜️'
+            wrong: '⬜'
         };
 
         const guessLines = this.guessHistory
