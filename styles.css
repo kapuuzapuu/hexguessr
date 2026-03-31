@@ -218,15 +218,15 @@ html.dark {
    RESPONSIVE ADJUSTMENTS
    ========================================================================== */
 
-/* Large touch devices (e.g., iPad Pro): allow a bigger scale than desktop */
-@media (min-width: 768px) and (pointer: coarse) {
+/* Large touch devices (e.g., iPad): allow a bigger scale than desktop */
+@media (min-width: 601px) and (pointer: coarse) {
     :root {
         --app-scale: clamp(10px, 4vw, 24px);
     }
 }
 
 /* Small touch phones: reduce scale only to prevent side clipping */
-@media (max-width: 767px) and (pointer: coarse) {
+@media (max-width: 600px) and (pointer: coarse) {
     :root {
         --app-scale: clamp(6px, 4vw, 18px);
     }
