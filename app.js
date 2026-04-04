@@ -2358,9 +2358,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <p class="modal-paragraph">You get 6 attempts, and can only reveal the target color for a short period once per attempt. Click the reveal square to briefly preview the target color, then use the color canvas and hue slider to help you guess. You can fine tune your guess by manually editing the hexcode under the color preview, and then copy/paste it into the grid. Submit once you're ready, and use the grid color feedback to improve your next guess.</p>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Feedback</span></p>
                     <ul class="color-list">
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--correct"></span> = Digit value is correct</li>
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--near"></span> = Digit value is off by 1</li>
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--far"></span> = Digit value is off by more than 1</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--correct"></span> = Digit is correct</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--near"></span> = Digit is off by 1</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--far"></span> = Digit is off by more than 1</li>
                     </ul>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Tips & Controls</span></p>
                     <p class="modal-paragraph">With each attempt, the amount of time the target color is shown per reveal increases. You can click on the "#" in any row with a submitted guess to quickly paste it back into the color picker. On mobile you have to tap the color canvas and hue slider first before they become interactable.</p>
