@@ -486,6 +486,7 @@ html.dark #darkModeToggle .icon--sun {
     text-align: center;
     box-shadow: var(--shadow-body-offset) var(--shadow-body-offset) 0 var(--color-shadow);
     font-size: var(--color-display-font-size);
+    line-height: 1.1;
     color: var(--color-primary);
     padding: var(--spacing-xl);
 }
