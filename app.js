@@ -124,7 +124,7 @@ class HexColorWordle {
         this.dailyPuzzleDate = opts.dailyPuzzleDate || new Date().toISOString().split('T')[0];
         this.currentAttempt = 1;
         
-        this.maxAttempts = 6;
+        this.maxAttempts = 5;
         this.gameOver = false;
         this.colorVisible = false;
         this.hasRevealedThisAttempt = false;
@@ -205,12 +205,13 @@ class HexColorWordle {
     }
             
     buildGrid() {
-        // build 6x6 grid
-        this.gridRows = 6;
+        // Build a maxAttempts x 6 grid
+        this.gridRows = this.maxAttempts;
         this.gridCols = 6;
         this.currentRow = 0;
         this.currentCol = 0;
         this.gridEl = document.getElementById('hexGrid');
+        this.gridEl.style.setProperty('--grid-rows', String(this.gridRows));
         this.gridEl.innerHTML = '';
         this.gridCellRefs = [];
 
@@ -397,6 +398,7 @@ class HexColorWordle {
         const statusToEmoji = {
             correct: '🟩',
             close: '🟨',
+            near: '🟧',
             wrong: '⬜'
         };
 
@@ -1387,7 +1389,7 @@ class HexColorWordle {
 
         rowCells.forEach((cell, i) => {
             // clean previous state classes
-            cell.classList.remove('correct', 'close', 'wrong', 'reveal-jump', 'land-pop');
+            cell.classList.remove('correct', 'close', 'near', 'wrong', 'reveal-jump', 'land-pop');
 
             setTimeout(() => {
                 // start jump
@@ -1395,7 +1397,7 @@ class HexColorWordle {
 
                 // halfway down: apply status color
                 setTimeout(() => {
-                    cell.classList.remove('correct', 'close', 'wrong'); // safety
+                    cell.classList.remove('correct', 'close', 'near', 'wrong'); // safety
                     cell.classList.add(statuses[i]);
                 }, swapAt);
 
@@ -1409,18 +1411,25 @@ class HexColorWordle {
         });
     }
 
-    isClose(guessChar, targetChar) {
+    getDigitDistance(guessChar, targetChar) {
         const guessValue = parseInt(guessChar, 16);
         const targetValue = parseInt(targetChar, 16);
-        return Math.abs(guessValue - targetValue) <= 1;
+        return Math.abs(guessValue - targetValue);
     }
 
     getStatusesForGuess(guess) {
         const statuses = [];
         for (let i = 0; i < 6; i++) {
-            const isCorrect = (guess[i] === this.targetColor[i]);
-            const isClose = this.isClose(guess[i], this.targetColor[i]);
-            statuses.push(isCorrect ? 'correct' : (isClose ? 'close' : 'wrong'));
+            const distance = this.getDigitDistance(guess[i], this.targetColor[i]);
+            if (distance === 0) {
+                statuses.push('correct');
+            } else if (distance <= 2) {
+                statuses.push('close');
+            } else if (distance <= 5) {
+                statuses.push('near');
+            } else {
+                statuses.push('wrong');
+            }
         }
         return statuses;
     }
@@ -1538,13 +1547,14 @@ class HexColorWordle {
                 'Perfect!',
                 'Brilliant!',
                 'Outstanding!',
-                'Excellent!'
+                'Excellent!',
+                'Incredible!'
             ];
             
             // Special messages for attempts
-            if (attempts === 1) return 'Unbelievable!';
-            if (attempts === 2) return 'Incredible!';
-            if (attempts === 6) return 'Phew! Close one!';
+            if (attempts === 1) return 'Be honest. Did you cheat?';
+            if (attempts === 2) return 'Are you a wizard!?';
+            if (attempts === 5) return 'Phew! Close one!';
             
             return winMessages[Math.floor(Math.random() * winMessages.length)];
         } else {
@@ -1754,13 +1764,21 @@ class HexColorWordle {
             // Restore game state
             this.dailyPuzzleDate = savedPuzzleDate;
             this.targetColor = gameState.targetColor;
-            this.currentAttempt = gameState.currentAttempt;
-            this.currentRow = gameState.currentRow !== undefined ? gameState.currentRow : (this.currentAttempt - 1);
-            this.currentCol = gameState.currentCol !== undefined ? gameState.currentCol : 0;
+            const rawAttempt = Number(gameState.currentAttempt);
+            const safeAttempt = Number.isFinite(rawAttempt) ? Math.trunc(rawAttempt) : 1;
+            this.currentAttempt = Math.max(1, Math.min(this.maxAttempts, safeAttempt));
+
+            const rawRow = gameState.currentRow !== undefined ? Number(gameState.currentRow) : (this.currentAttempt - 1);
+            const safeRow = Number.isFinite(rawRow) ? Math.trunc(rawRow) : (this.currentAttempt - 1);
+            this.currentRow = Math.max(0, Math.min(this.gridRows - 1, safeRow));
+
+            const rawCol = gameState.currentCol !== undefined ? Number(gameState.currentCol) : 0;
+            const safeCol = Number.isFinite(rawCol) ? Math.trunc(rawCol) : 0;
+            this.currentCol = Math.max(0, Math.min(this.gridCols, safeCol));
             this.gameOver = gameState.gameOver;
             this.colorVisible = gameState.colorVisible || false;
             this.hasRevealedThisAttempt = gameState.hasRevealedThisAttempt || false;
-            this.guessHistory = gameState.guessHistory || [];
+            this.guessHistory = (gameState.guessHistory || []).slice(0, this.maxAttempts);
             this.postGameActionRow = Number.isInteger(gameState.postGameActionRow)
                 ? Math.max(0, Math.min(this.gridRows - 1, gameState.postGameActionRow))
                 : null;
@@ -1775,18 +1793,22 @@ class HexColorWordle {
             }
             
             // Restore grid visual state
-            if (gameState.gridState) {
-                for (let row = 0; row < gameState.gridState.length; row++) {
-                    const rowState = gameState.gridState[row];
+            if (Array.isArray(gameState.gridState)) {
+                const maxRowsToRestore = Math.min(this.gridRows, gameState.gridState.length);
+                for (let row = 0; row < maxRowsToRestore; row++) {
+                    const rowState = Array.isArray(gameState.gridState[row]) ? gameState.gridState[row] : [];
                     let hasContent = false;
                     
-                    for (let col = 0; col < rowState.length; col++) {
+                    const maxColsToRestore = Math.min(this.gridCols, rowState.length);
+                    for (let col = 0; col < maxColsToRestore; col++) {
                         const cell = this.gridCellRefs[row]?.[col];
                         const cellState = rowState[col];
                         if (cell && cellState) {
                             cell.textContent = cellState.text;
                             // Restore class but remove animation classes to prevent glitch
-                            const cleanClass = cellState.class.replace(/\b(reveal-jump|land-pop)\b/g, '').trim();
+                            const cleanClass = cellState.class
+                                .replace(/\b(reveal-jump|land-pop)\b/g, '')
+                                .trim();
                             cell.className = cleanClass;
                             if (cellState.text) hasContent = true;
                         }
@@ -2355,12 +2377,13 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Goal</span></p>
                     <p class="modal-paragraph">Match the hidden target color by entering its corresponding 6-digit hex code into the grid.</p>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Rules</span></p>
-                    <p class="modal-paragraph">You get 6 attempts, and can only reveal the target color for a short time once per attempt. Click the reveal square to briefly preview the target color, then use the color canvas and hue slider to help you guess. You can fine tune your guess by manually editing the hexcode under the color preview, and then copy/paste it into the grid. Submit once you're ready, and use the grid color feedback to improve your next guess.</p>
+                    <p class="modal-paragraph">You get 5 attempts, and can only reveal the target color for a short time once per attempt. Click the reveal square to briefly preview the target color, then use the color canvas and hue slider to help you guess. You can fine tune your guess by manually editing the hexcode under the color preview, and then copy/paste it into the grid. Submit once you're ready, and use the grid color feedback to improve your next guess.</p>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Feedback</span></p>
                     <ul class="color-list">
                         <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--correct"></span> = Digit is correct</li>
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--near"></span> = Digit is off by 1</li>
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--far"></span> = Digit is off by more than 1</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--close"></span> = Digit is off by 1 or 2</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--near"></span> = Digit is off by 3, 4, or 5</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--far"></span> = Digit is off by more than 5</li>
                     </ul>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Tips & Controls</span></p>
                     <p class="modal-paragraph">With each attempt, the amount of time the target color is shown per reveal increases. You can click on the "#" in any row with a submitted guess to quickly paste it back into the color picker. On mobile you have to tap the color canvas and hue slider first before they become interactable.</p>

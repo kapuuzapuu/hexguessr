@@ -825,7 +825,7 @@ html.dark .color-preview {
 
 .hex-grid {
     display: grid;
-    grid-template-rows: repeat(6, 1fr);
+    grid-template-rows: repeat(var(--grid-rows, 5), 1fr);
     grid-auto-rows: var(--cell-size);
     gap: var(--gap-size);
     outline: none;
@@ -864,6 +864,11 @@ html.dark .color-preview {
 
 .grid-cell.close {
     background: #FFC107 !important;
+    color: #fff !important;
+}
+
+.grid-cell.near {
+    background: #FF8200 !important;
     color: #fff !important;
 }
 
@@ -1218,13 +1223,17 @@ html.dark .row-label.colored {
     box-shadow: var(--shadow-grid-offset) var(--shadow-grid-offset) 0 var(--color-shadow);
 }
 
-/* Variants for the three feedback types */
+/* Variants for feedback types */
 .color-legend-swatch--correct {
     background: #4CAF50;
 }
 
-.color-legend-swatch--near {
+.color-legend-swatch--close {
     background: #FFC107;
+}
+
+.color-legend-swatch--near {
+    background: #FF8200;
 }
 
 .color-legend-swatch--far {

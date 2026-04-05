@@ -4,24 +4,25 @@
 
 `Fallback`: [hexguessr.pages.dev](https://hexguessr.pages.dev)
 
-A retro-inspired web game where you attempt to guess a target color's hexcode within 6 tries.
+A retro-inspired web game where you attempt to guess a target color's hexcode within 5 tries.
 
 HexGuessr combines Wordle-style per-character feedback with a live color picker so you can reason visually and numerically at the same time.
 
 ## Gameplay
 
-- Guess a 6-digit hex color (`#000000` to `#FFFFFF`) in up to 6 attempts.
+- Guess a 6-digit hex color (`#000000` to `#FFFFFF`) in up to 5 attempts.
 - Use the reveal square once per attempt to briefly preview the target color.
 - Refine guesses using the color canvas, hue slider, and hex input field.
-- Submit guesses into the 6x6 grid.
+- Submit guesses into the 5x6 grid.
 
 ### Feedback Rules
 
-Each character gets one of three feedback states:
+Each character gets one of four feedback states:
 
-- `Correct`: digit in position is correct.
-- `Near`: digit is off by 1 (example: `7` or `9` when target is `8`).
-- `Far`: digit is off by more than 1.
+- `Green`: digit in position is correct.
+- `Yellow`: digit is off by 1 or 2 (example: `6`/`7` or `9`/`A` when target is `8`).
+- `Orange`: digit is off by 3 to 5 (example: `3`/`4`/`5` or `B`/`C`/`D` when target is `8`).
+- `Gray`: digit is off by more than 5.
 
 ## Modes
 
