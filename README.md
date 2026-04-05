@@ -19,7 +19,7 @@ HexGuessr combines Wordle-style per-character feedback with a live color picker 
 
 Each character gets one of three feedback states:
 
-- `Correct`: exact digit in the exact position.
+- `Correct`: digit in position is correct.
 - `Near`: digit is off by 1 (example: `7` or `9` when target is `8`).
 - `Far`: digit is off by more than 1.
 
