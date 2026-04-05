@@ -17,7 +17,7 @@ HexGuessr combines Wordle-style per-character feedback with a live color picker 
 
 ### Feedback Rules
 
-Each character gets one of four feedback states:
+Each character gets one of four colored feedback states:
 
 - `Green`: digit in position is correct.
 - `Yellow`: digit is off by 1 or 2 (example: `6`/`7` or `9`/`A` when target is `8`).
