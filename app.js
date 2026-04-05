@@ -372,7 +372,9 @@ class HexColorWordle {
     getShareDateText() {
         const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const fallback = new Date();
-        const source = this.mode === 'daily' ? this.dailyPuzzleDate : null;
+        const source = this.mode === 'daily'
+            ? this.dailyPuzzleDate
+            : fallback.toISOString().split('T')[0];
         const ymdMatch = typeof source === 'string'
             ? source.match(/^(\d{4})-(\d{2})-(\d{2})$/)
             : null;
@@ -384,9 +386,9 @@ class HexColorWordle {
             return `${monthLabel}/${day}/${year}`;
         }
 
-        const month = monthLabels[fallback.getMonth()];
-        const day = String(fallback.getDate()).padStart(2, '0');
-        const year = String(fallback.getFullYear());
+        const month = monthLabels[fallback.getUTCMonth()];
+        const day = String(fallback.getUTCDate()).padStart(2, '0');
+        const year = String(fallback.getUTCFullYear());
         return `${month}/${day}/${year}`;
     }
 
