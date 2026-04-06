@@ -2717,7 +2717,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 : '0%';
             // Count all guesses across all games (wins and losses)
             stats.avgGuesses = stats.gamesPlayed > 0 
-                ? (stats.totalGuessesAllGames / stats.gamesPlayed).toFixed(1)
+                ? (stats.totalGuessesAllGames / stats.gamesPlayed).toFixed(2)
                 : '--';
             
             // Convert color error to accuracy percentage
