@@ -20,9 +20,9 @@ HexGuessr combines Wordle-style per-character feedback with a live color picker 
 Each character gets one of four colored feedback states:
 
 - `Green`: digit in position is correct.
-- `Yellow`: digit is off by 1 or 2 (example: `6`/`7` or `9`/`A` when target is `8`).
-- `Orange`: digit is off by 3 to 5 (example: `3`/`4`/`5` or `B`/`C`/`D` when target is `8`).
-- `Gray`: digit is off by more than 5.
+- `Yellow`: digit is off by 1 (example: `7` or `9` when target is `8`).
+- `Orange`: digit is off by 2 or 3 (example: `5`/`6` or `A`/`B` when target is `8`).
+- `Gray`: digit is off by more than 3.
 
 ## Modes
 

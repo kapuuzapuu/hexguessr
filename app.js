@@ -1425,9 +1425,9 @@ class HexColorWordle {
             const distance = this.getDigitDistance(guess[i], this.targetColor[i]);
             if (distance === 0) {
                 statuses.push('correct');
-            } else if (distance <= 2) {
+            } else if (distance <= 1) {
                 statuses.push('close');
-            } else if (distance <= 5) {
+            } else if (distance <= 3) {
                 statuses.push('near');
             } else {
                 statuses.push('wrong');
@@ -2383,9 +2383,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Feedback</span></p>
                     <ul class="color-list">
                         <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--correct"></span> = Digit is correct</li>
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--close"></span> = Digit is off by 1 or 2</li>
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--near"></span> = Digit is off by 3, 4, or 5</li>
-                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--far"></span> = Digit is off by more than 5</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--close"></span> = Digit is off by 1</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--near"></span> = Digit is off by 2 or 3</li>
+                        <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--far"></span> = Digit is off by more than 3</li>
                     </ul>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Tips & Controls</span></p>
                     <p class="modal-paragraph">With each attempt, the amount of time the target color is shown per reveal increases. You can click on the "#" in any row with a submitted guess to quickly paste it back into the color picker. On mobile you have to tap the color canvas and hue slider first before they become interactable.</p>
