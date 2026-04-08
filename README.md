@@ -4,7 +4,7 @@
 
 `Fallback`: [hexguessr.pages.dev](https://hexguessr.pages.dev)
 
-A retro-inspired web game where you attempt to guess a target color's hexcode within 5 tries.
+A retro-inspired web game where you attempt to guess a target color's hex code within 5 tries.
 
 HexGuessr combines Wordle-style per-character feedback with a live color picker so you can reason visually and numerically at the same time.
 

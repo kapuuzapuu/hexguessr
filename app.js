@@ -1270,7 +1270,7 @@ class HexColorWordle {
         if (guess.length < 6) {
             // Show toast notification
             if (typeof window.showToast === 'function') {
-                window.showToast('Hexcode is too short');
+                window.showToast('Hex code is too short');
             }
             // Shake the current row
             const currentRowEl = this.gridCellRefs[this.currentRow][0]?.parentElement;
@@ -1289,7 +1289,7 @@ class HexColorWordle {
         
         if (!/^[0-9A-F]{6}$/.test(guess)) {
             if (typeof window.showToast === 'function') {
-                window.showToast('Invalid characters in hexcode');
+                window.showToast('Invalid characters in hex code');
             }
             // Shake the current row
             const currentRowEl = this.gridCellRefs[this.currentRow][0]?.parentElement;
@@ -2379,7 +2379,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Goal</span></p>
                     <p class="modal-paragraph">Match the hidden target color by entering its corresponding 6-digit hex code into the grid.</p>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Rules</span></p>
-                    <p class="modal-paragraph">You get 5 attempts, and can only reveal the target color for a short time once per attempt. Click the reveal square to briefly preview the target color, then use the color canvas and hue slider to help you guess. You can fine tune your guess by manually editing the hexcode under the color preview, and then copy/paste it into the grid. Submit once you're ready, and use the grid color feedback to improve your next guess.</p>
+                    <p class="modal-paragraph">You get 5 attempts, and can only reveal the target color for a short time once per attempt. Click the reveal square to briefly preview the target color, then use the color canvas and hue slider to help you guess. You can fine tune your guess by manually editing the text field under the color preview, and then copy/paste it into the grid. Submit once you're ready, and use the grid color feedback to improve your next guess.</p>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Feedback</span></p>
                     <ul class="color-list">
                         <li class="modal-list-item"><span class="color-legend-swatch color-legend-swatch--correct"></span> = Digit is correct</li>
@@ -2391,7 +2391,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <p class="modal-paragraph">With each attempt, the amount of time the target color is shown per reveal increases. You can click on the "#" in any row with a submitted guess to quickly paste it back into the color picker. On mobile you have to tap the color canvas and hue slider first before they become interactable.</p>
                     <p class="modal-paragraph modal-section-paragraph"><span class="modal-section-box modal-section-header">Modes</span></p>
                     <p class="modal-paragraph">Daily mode gives every player the same global color each day. Unlimited mode gives you endless random colors for practice.</p>
-                    <p class="modal-footer-text">New to hexcodes? Click <a href="https://www.w3schools.com/html/html_colors_hex.asp" target="_blank" class="modal-link">here</a>.</p>
+                    <p class="modal-footer-text">New to hex codes? Click <a href="https://www.w3schools.com/html/html_colors_hex.asp" target="_blank" class="modal-link">here</a>.</p>
                 </div>
         `;
         openModal(helpContent);
