@@ -181,6 +181,7 @@ class HexColorWordle {
             setTimeout(() => {
                 autoPopupBypassState[autoChannel].pending = false;
                 if (shouldSuppressAutoPopup(autoChannel)) return;
+                if (document.body.classList.contains('modal-open')) return; // Don't auto-open if another modal is open
                 if (typeof window.showStatsModal === 'function') {
                     window.showStatsModal(true); // true = already completed
                 }
@@ -1519,6 +1520,7 @@ class HexColorWordle {
             setTimeout(() => {
                 autoPopupBypassState[autoChannel].pending = false;
                 if (shouldSuppressAutoPopup(autoChannel)) return;
+                if (document.body.classList.contains('modal-open')) return; // Don't auto-show if another modal is open
                 if (typeof window.showStatsModal === 'function') {
                     // In daily mode, pass true to show timer instead of play button
                     const isDailyCompleted = this.mode === 'daily';
@@ -2403,6 +2405,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (infoBtn) {
         infoBtn.addEventListener('click', () => {
             markAutoPopupBypassed('onboardingHelpAuto');
+            markAutoPopupBypassed('statsOnLoadAuto');
+            markAutoPopupBypassed('statsEndgameAuto');
             openHelpModal();
         });
     }
