@@ -86,16 +86,16 @@
     --hue-cursor-height: calc(var(--app-scale) * 1.2);
     --cursor-border-width: calc(var(--app-scale) * 0.2);
 
-    /* ===== INPUT SIZES ===== */
-    --hex-input-height: calc(var(--app-scale) * 2);
-    --hex-prefix-space: calc(var(--hex-input-focus-font-size) * 1.75);
-    --hex-prefix-left: calc(var(--app-scale) * 0.5);
-    --hex-input-padding: calc(var(--hex-input-focus-font-size) * 0.35);
-    --hex-input-padding-offset: calc(var(--hex-input-focus-font-size) * 0.175);
-    --hex-input-padding-right: calc((var(--hex-input-height) + var(--hex-input-padding-offset)) / var(--hex-input-visual-scale));
-    --hex-input-focus-font-size: 16px;
+    /* ===== HEX OUTPUT SIZES ===== */
+    --hex-output-height: calc(var(--app-scale) * 2);
+    --hex-output-prefix-space: calc(var(--hex-output-focus-font-size) * 1.75);
+    --hex-output-prefix-left: calc(var(--app-scale) * 0.5);
+    --hex-output-padding: calc(var(--hex-output-focus-font-size) * 0.35);
+    --hex-output-padding-offset: calc(var(--hex-output-focus-font-size) * 0.175);
+    --hex-output-padding-right: calc((var(--hex-output-height) + var(--hex-output-padding-offset)) / var(--hex-output-visual-scale));
+    --hex-output-focus-font-size: 16px;
     /* JS computes this at runtime for iOS/WebKit compatibility (typed division fallback). */
-    --hex-input-visual-scale: 1;
+    --hex-output-visual-scale: 1;
 
     /* ===== TIMER BAR ===== */
     --timer-bar-height: calc(var(--app-scale) * 2);
@@ -689,7 +689,7 @@ html.dark .color-preview {
     border-color: var(--color-primary);
 }
 
-.hex-input-container {
+.hex-output-container {
     display: flex;
     align-items: center;
 
@@ -697,8 +697,8 @@ html.dark .color-preview {
     max-width: 100%;                     /* safety on tiny screens */
     align-self: center;                  /* center inside color-controls */
 
-    height: var(--hex-input-height);
-    flex: 0 0 var(--hex-input-height);
+    height: var(--hex-output-height);
+    flex: 0 0 var(--hex-output-height);
     background: var(--color-surface);
     border: none;
     position: relative;
@@ -706,38 +706,38 @@ html.dark .color-preview {
     overflow: visible;
 }
 
-.hex-prefix {
+.hex-output-prefix {
     position: absolute;
-    left: var(--hex-prefix-left);
+    left: var(--hex-output-prefix-left);
     top: 0;
     bottom: 0;
     display: flex;
     align-items: center;
     line-height: 1;
-    transform: scale(var(--hex-input-visual-scale));
+    transform: scale(var(--hex-output-visual-scale));
     transform-origin: left center;
-    font-size: var(--hex-input-focus-font-size);
+    font-size: var(--hex-output-focus-font-size);
     color: var(--color-primary);
     user-select: none;
     pointer-events: none;
     z-index: 2;
 }
 
-.hex-input-field {
-    padding: var(--hex-input-padding) var(--hex-input-padding-offset);
-    padding-left: var(--hex-prefix-space) !important;
-    padding-right: var(--hex-input-padding-right) !important;
-    font-size: var(--hex-input-focus-font-size);
+.hex-output-field {
+    padding: var(--hex-output-padding) var(--hex-output-padding-offset);
+    padding-left: var(--hex-output-prefix-space) !important;
+    padding-right: var(--hex-output-padding-right) !important;
+    font-size: var(--hex-output-focus-font-size);
     line-height: 1;
     border: none;
     flex: 0 0 auto;
-    width: calc((100% / var(--hex-input-visual-scale)) + 1px);
+    width: calc((100% / var(--hex-output-visual-scale)) + 1px);
     min-width: 0;
     background: transparent;
     text-transform: uppercase;
     color: var(--color-primary);
     outline: none;
-    transform: scale(var(--hex-input-visual-scale));
+    transform: scale(var(--hex-output-visual-scale));
     transform-origin: left center;
 }
 
@@ -746,8 +746,8 @@ html.dark .color-preview {
     top: 50%;
     right: 0;
     transform: translateY(-50%);
-    width: var(--hex-input-height);
-    height: var(--hex-input-height);
+    width: var(--hex-output-height);
+    height: var(--hex-output-height);
     padding: 0;
 
     /* kill the native button look */

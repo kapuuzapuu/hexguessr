@@ -201,7 +201,7 @@ class HexColorWordle {
         this.hueSlider = document.getElementById('hueSlider');
         this.hueCursor = document.getElementById('hueCursor');
         this.colorPreview = document.getElementById('colorPreview');
-        this.hexInputField = document.getElementById('hexInputField');
+        this.hexOutputField = document.getElementById('hexOutputField');
         this.copyBtn = document.getElementById('copyBtn');
     }
             
@@ -610,12 +610,12 @@ class HexColorWordle {
                 // Only proceed if it's a full 6-char hex
                 if (hex.length !== 6) return;
 
-                // Put it into the main hex input + sync the picker
-                this.hexInputField.value = hex;
+                // Put it into the main hex output + sync the picker
+                this.hexOutputField.value = hex;
                 this.updateFromHex(hex);
 
-                // Keep preview + input visible with a top offset (no center jump).
-                const controls = this.hexInputField?.closest('.color-controls') || this.hexInputField;
+                // Keep preview + output visible with a top offset (no center jump).
+                const controls = this.hexOutputField?.closest('.color-controls') || this.hexOutputField;
                 if (controls) {
                     const topPad = 16; // room above preview so it doesn't feel cramped
                     const rect = controls.getBoundingClientRect();
@@ -627,9 +627,9 @@ class HexColorWordle {
                 }
 
                 try {
-                    this.hexInputField.focus({ preventScroll: true });
+                    this.hexOutputField.focus({ preventScroll: true });
                 } catch {
-                    this.hexInputField.focus();
+                    this.hexOutputField.focus();
                 }
             };
         });
@@ -873,8 +873,8 @@ class HexColorWordle {
             clearTouchFocus();
         }, { passive: true });
 
-        // ----- Hex input restrictions -----
-        this.hexInputField.addEventListener('beforeinput', (e) => {
+        // ----- Hex output restrictions -----
+        this.hexOutputField.addEventListener('beforeinput', (e) => {
             if (e.isComposing) return;
             if (!e.inputType || !e.inputType.startsWith('insert')) return;
 
@@ -890,7 +890,7 @@ class HexColorWordle {
             }
         });
 
-        this.hexInputField.addEventListener("keydown", e => {
+        this.hexOutputField.addEventListener("keydown", e => {
             // Allow shortcuts
             if (e.metaKey || e.ctrlKey || e.altKey) return;
 
@@ -898,7 +898,7 @@ class HexColorWordle {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.hexInputField.blur();
+                this.hexOutputField.blur();
                 return;
             }
 
@@ -910,16 +910,16 @@ class HexColorWordle {
 
             // At max length, don't allow new chars unless replacing a selection.
             if (/^[0-9A-Fa-f]$/.test(e.key)) {
-                const start = this.hexInputField.selectionStart ?? 0;
-                const end = this.hexInputField.selectionEnd ?? 0;
+                const start = this.hexOutputField.selectionStart ?? 0;
+                const end = this.hexOutputField.selectionEnd ?? 0;
                 const hasSelection = end > start;
-                if (this.hexInputField.value.length >= 6 && !hasSelection) {
+                if (this.hexOutputField.value.length >= 6 && !hasSelection) {
                     e.preventDefault();
                 }
             }
         });
 
-        this.hexInputField.addEventListener('input', (e) => {
+        this.hexOutputField.addEventListener('input', (e) => {
             const input = e.target;
             const pos = input.selectionStart;
             const filtered = input.value
@@ -936,7 +936,7 @@ class HexColorWordle {
         });
 
         this.copyBtn.addEventListener('click', async () => {
-            const hexValue = (this.hexInputField.value || '')
+            const hexValue = (this.hexOutputField.value || '')
                 .toUpperCase()
                 .replace(/[^0-9A-F]/g, '')
                 .slice(0, 6);
@@ -1066,7 +1066,7 @@ class HexColorWordle {
                 
         // Update UI
         this.colorPreview.style.backgroundColor = `#${hex}`;
-        this.hexInputField.value = hex;
+        this.hexOutputField.value = hex;
     }
             
     updateFromHex(hex) {
@@ -1108,9 +1108,9 @@ class HexColorWordle {
             this.requestPickerCursorSync(6);
         }
 
-        // Update preview + hex field
+        // Update preview + hex output field
         this.colorPreview.style.backgroundColor = `#${hex}`;
-        this.hexInputField.value = hex;
+        this.hexOutputField.value = hex;
     }
 
     handleResize = () => {
@@ -1901,40 +1901,40 @@ class HexColorWordle {
 
 // Start the app when the page loads (server-driven daily color)
 window.addEventListener('DOMContentLoaded', async () => {
-    // Keep hex input scale stable on engines that don't support CSS typed division.
+    // Keep hex output scale stable on engines that don't support CSS typed division.
     let hexScaleRaf = 0;
-    const syncHexInputVisualScale = () => {
+    const syncHexOutputVisualScale = () => {
         const root = document.documentElement;
-        const hexInput = document.querySelector('.hex-input-field');
-        const hexContainer = document.querySelector('.hex-input-container');
-        if (!hexInput || !hexContainer) return;
+        const hexOutput = document.querySelector('.hex-output-field');
+        const hexOutputContainer = document.querySelector('.hex-output-container');
+        if (!hexOutput || !hexOutputContainer) return;
 
-        const focusFontPx = parseFloat(getComputedStyle(hexInput).fontSize) || 16;
-        const containerHeightPx = hexContainer.getBoundingClientRect().height;
+        const focusFontPx = parseFloat(getComputedStyle(hexOutput).fontSize) || 16;
+        const containerHeightPx = hexOutputContainer.getBoundingClientRect().height;
 
         if (!Number.isFinite(containerHeightPx) || !Number.isFinite(focusFontPx) || focusFontPx <= 0) return;
 
         // container height is 2 * app-scale; desired visual scale is app-scale / focusFontPx
         const scale = containerHeightPx / (2 * focusFontPx);
         if (!Number.isFinite(scale) || scale <= 0) return;
-        root.style.setProperty('--hex-input-visual-scale', scale.toFixed(4));
+        root.style.setProperty('--hex-output-visual-scale', scale.toFixed(4));
     };
 
-    const queueHexInputScaleSync = () => {
+    const queueHexOutputScaleSync = () => {
         if (hexScaleRaf) {
             cancelAnimationFrame(hexScaleRaf);
         }
         hexScaleRaf = requestAnimationFrame(() => {
             hexScaleRaf = 0;
-            syncHexInputVisualScale();
+            syncHexOutputVisualScale();
         });
     };
 
-    queueHexInputScaleSync();
-    window.addEventListener('resize', queueHexInputScaleSync, { passive: true });
-    window.addEventListener('orientationchange', queueHexInputScaleSync);
+    queueHexOutputScaleSync();
+    window.addEventListener('resize', queueHexOutputScaleSync, { passive: true });
+    window.addEventListener('orientationchange', queueHexOutputScaleSync);
     if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', queueHexInputScaleSync, { passive: true });
+        window.visualViewport.addEventListener('resize', queueHexOutputScaleSync, { passive: true });
     }
 
     // --- Decide mode (path vs local file query) ---
