@@ -2011,7 +2011,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             
             // Save preference to localStorage
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            
+            updateThemeColor(document.body.classList.contains('modal-open'));
+
             // Update aria-label
             darkModeBtn.setAttribute("aria-label", isDark ? "Light Mode" : "Dark Mode");
         });
@@ -2197,6 +2198,30 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.addEventListener('keydown', focusTrapHandler);
     }
 
+    // Mobile browser chrome (Safari/Chrome) reads <meta name="theme-color">.
+    // When a modal opens we tint the chrome to match the darkened overlay
+    // so the bars don't snap back to the lighter base bg color.
+    function updateThemeColor(modalOpen) {
+        const meta = document.getElementById('themeColorMeta');
+        if (!meta) return;
+        const styles = getComputedStyle(document.documentElement);
+        const baseHex = (styles.getPropertyValue('--color-page-bg') || '').trim();
+        const m = baseHex.match(/^#?([0-9a-f]{6})$/i);
+        if (!m) return;
+        const n = parseInt(m[1], 16);
+        let r = (n >> 16) & 0xff;
+        let g = (n >> 8) & 0xff;
+        let b = n & 0xff;
+        if (modalOpen) {
+            // Composite rgba(0,0,0,0.7) over base — must stay in sync with .modal-overlay alpha.
+            const a = 0.7;
+            r = Math.round(r * (1 - a));
+            g = Math.round(g * (1 - a));
+            b = Math.round(b * (1 - a));
+        }
+        meta.content = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
     function openModal(content) {
         if (!modal || !modalBody) return;
         modalBody.innerHTML = content;
@@ -2208,7 +2233,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.documentElement.classList.add('modal-open');
         document.body.classList.add('modal-open');
         document.body.style.top = `-${lockedScrollY}px`;
-        
+        updateThemeColor(true);
+
         // Attach close button handler (now inside modal content)
         const modalClose = modalBody.querySelector('.modal-close');
         if (modalClose) {
@@ -2235,6 +2261,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.documentElement.classList.remove('modal-open');
         document.body.classList.remove('modal-open');
         document.body.style.top = '';
+        updateThemeColor(false);
         window.scrollTo(0, lockedScrollY);
         
         // Remove focus trap handler
