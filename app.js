@@ -2011,7 +2011,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             
             // Save preference to localStorage
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeColor(document.body.classList.contains('modal-open'));
             
             // Update aria-label
             darkModeBtn.setAttribute("aria-label", isDark ? "Light Mode" : "Dark Mode");
@@ -2198,17 +2197,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.addEventListener('keydown', focusTrapHandler);
     }
 
-    function updateThemeColor(modalOpen) {
-        const meta = document.getElementById('themeColorMeta');
-        if (!meta) return;
-        const isDark = document.documentElement.classList.contains('dark');
-        if (modalOpen) {
-            meta.content = isDark ? '#0b0b0b' : '#494949';
-        } else {
-            meta.content = isDark ? '#262626' : '#f5f5f5';
-        }
-    }
-
     function openModal(content) {
         if (!modal || !modalBody) return;
         modalBody.innerHTML = content;
@@ -2220,7 +2208,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.documentElement.classList.add('modal-open');
         document.body.classList.add('modal-open');
         document.body.style.top = `-${lockedScrollY}px`;
-        updateThemeColor(true);
         
         // Attach close button handler (now inside modal content)
         const modalClose = modalBody.querySelector('.modal-close');
@@ -2248,7 +2235,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.documentElement.classList.remove('modal-open');
         document.body.classList.remove('modal-open');
         document.body.style.top = '';
-        updateThemeColor(false);
         window.scrollTo(0, lockedScrollY);
         
         // Remove focus trap handler
