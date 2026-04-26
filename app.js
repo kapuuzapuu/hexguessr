@@ -79,14 +79,22 @@ function triggerPop(cell) {
 }
 
 // Daily color: fetch from server (no client algorithm)
-async function fetchDailyPuzzle() {
-  const res = await fetch('/api/daily-color', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch daily color');
-  const data = await res.json();
-  const hex = String(data?.hex || '').toUpperCase();
-  const date = data?.date || new Date().toISOString().split('T')[0];
-  if (!/^[0-9A-F]{6}$/.test(hex)) throw new Error('Invalid daily color payload');
-  return { hex, date };
+// Honors the API's own Cache-Control headers (max-age until UTC midnight),
+// so repeat visits within the day skip the network entirely.
+async function fetchDailyPuzzle({ timeoutMs = 5000 } = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch('/api/daily-color', { signal: ctrl.signal });
+    if (!res.ok) throw new Error('Failed to fetch daily color');
+    const data = await res.json();
+    const hex = String(data?.hex || '').toUpperCase();
+    const date = data?.date || new Date().toISOString().split('T')[0];
+    if (!/^[0-9A-F]{6}$/.test(hex)) throw new Error('Invalid daily color payload');
+    return { hex, date };
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 // --- End of helper functions ---
@@ -120,7 +128,14 @@ function shouldSuppressAutoPopup(channel) {
 class HexColorWordle {
     constructor(opts = {}) {
         this.mode = opts.mode || 'unlimited';
-        this.targetColor = (opts.targetColor || this.generateRandomColor());
+        // In daily mode the boot path may pass targetColor: null, meaning the
+        // fetch hasn't resolved yet. We render the UI immediately and plug the
+        // real target in later via setDailyTarget().
+        if (opts.targetColor === null) {
+            this.targetColor = null;
+        } else {
+            this.targetColor = opts.targetColor || this.generateRandomColor();
+        }
         this.dailyPuzzleDate = opts.dailyPuzzleDate || new Date().toISOString().split('T')[0];
         this.currentAttempt = 1;
         
@@ -1214,6 +1229,8 @@ class HexColorWordle {
     showColor() {
         // Prevent reveal during row-reveal animation/settle window so attempt timing stays correct.
         if (this.colorVisible || this.gameOver || this.hasRevealedThisAttempt || this.isAnimating) return;
+        // Daily mode: nothing to reveal until the target lands.
+        if (this.mode === 'daily' && !this.targetColor) return;
                 
         this.colorVisible = true;
         this.hasRevealedThisAttempt = true;
@@ -1260,6 +1277,13 @@ class HexColorWordle {
         if (this.gameOver || this.isAnimating) return;
         // Block submission if modal is open
         if (document.body.classList.contains('modal-open')) return;
+        // Daily mode: target color may not have arrived yet (network in flight)
+        if (this.mode === 'daily' && !this.targetColor) {
+            if (typeof window.showToast === 'function') {
+                window.showToast("Loading today's puzzle…");
+            }
+            return;
+        }
         // Do not allow guesses while the reveal timer is active
         if (this.colorVisible) {
             this.showWaitForRevealNotification();
@@ -1682,6 +1706,15 @@ class HexColorWordle {
         // Initialize timer text for new game
     }
 
+    // Called by the boot path once the daily-color fetch resolves.
+    // No-op if a target is already set (e.g. restored from localStorage).
+    setDailyTarget(hex, date) {
+        if (this.mode !== 'daily') return;
+        if (this.targetColor) return;
+        this.targetColor = hex;
+        if (date) this.dailyPuzzleDate = date;
+    }
+
     checkDailyCompletion() {
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         const saved = localStorage.getItem('dailyCompletion');
@@ -1945,27 +1978,57 @@ window.addEventListener('DOMContentLoaded', async () => {
                         : (pathIsUnlimited ? 'unlimited' : 'daily');
 
     // --- Boot mode ---
+    // UI renders synchronously regardless of mode. In daily mode, the target
+    // color either comes from localStorage (returning visitor mid-puzzle) or
+    // from a parallel network fetch with timeout + retry — never blocks paint.
     let gameInstance;
     if (MODE === 'unlimited') {
         gameInstance = new HexColorWordle({ mode: 'unlimited' });
-    } 
-    else {
-        try {
-            const dailyPuzzle = await fetchDailyPuzzle();
-            gameInstance = new HexColorWordle({
-                mode: 'daily',
-                targetColor: dailyPuzzle.hex,
-                dailyPuzzleDate: dailyPuzzle.date
-            });
-        } 
-        catch {
-            // graceful fallback if the API isn't reachable in dev
-            gameInstance = new HexColorWordle({ mode: 'unlimited' });
+    } else {
+        gameInstance = new HexColorWordle({ mode: 'daily', targetColor: null });
+        if (!gameInstance.targetColor) {
+            // No saved state restored a target — go to the network.
+            attemptDailyFetch();
         }
     }
-    
+
     // Make game instance globally accessible for restart
     window.gameInstance = gameInstance;
+
+    // --- Daily fetch with loading + error UI ---
+    const dailyLoadEl = document.getElementById('dailyLoadState');
+    const dailyLoadMsg = dailyLoadEl ? dailyLoadEl.querySelector('.daily-load-msg') : null;
+    const dailyRetryBtn = document.getElementById('dailyRetryBtn');
+
+    function setDailyLoadState(kind) {
+        if (!dailyLoadEl) return;
+        dailyLoadEl.classList.remove('hidden', 'is-error');
+        if (kind === 'error') {
+            dailyLoadEl.classList.add('is-error');
+            if (dailyLoadMsg) dailyLoadMsg.textContent = "Couldn't load today's mystery color.";
+            document.body.classList.add('daily-load-active');
+        } else {
+            dailyLoadEl.classList.add('hidden');
+            document.body.classList.remove('daily-load-active');
+        }
+    }
+
+    async function attemptDailyFetch() {
+        try {
+            const dailyPuzzle = await fetchDailyPuzzle({ timeoutMs: 5000 });
+            gameInstance.setDailyTarget(dailyPuzzle.hex, dailyPuzzle.date);
+            setDailyLoadState(null);
+        } catch {
+            setDailyLoadState('error');
+        }
+    }
+
+    if (dailyRetryBtn) {
+        dailyRetryBtn.addEventListener('click', () => {
+            if (gameInstance.targetColor) { setDailyLoadState(null); return; }
+            attemptDailyFetch();
+        });
+    }
 
     // --- Mode buttons: navigate correctly in both environments ---
     const modeBtns = document.querySelectorAll('.mode-container .mode-btn');
@@ -2011,7 +2074,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             
             // Save preference to localStorage
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeColor(document.body.classList.contains('modal-open'));
 
             // Update aria-label
             darkModeBtn.setAttribute("aria-label", isDark ? "Light Mode" : "Dark Mode");
@@ -2198,30 +2260,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.addEventListener('keydown', focusTrapHandler);
     }
 
-    // Mobile browser chrome (Safari/Chrome) reads <meta name="theme-color">.
-    // When a modal opens we tint the chrome to match the darkened overlay
-    // so the bars don't snap back to the lighter base bg color.
-    function updateThemeColor(modalOpen) {
-        const meta = document.getElementById('themeColorMeta');
-        if (!meta) return;
-        const styles = getComputedStyle(document.documentElement);
-        const baseHex = (styles.getPropertyValue('--color-page-bg') || '').trim();
-        const m = baseHex.match(/^#?([0-9a-f]{6})$/i);
-        if (!m) return;
-        const n = parseInt(m[1], 16);
-        let r = (n >> 16) & 0xff;
-        let g = (n >> 8) & 0xff;
-        let b = n & 0xff;
-        if (modalOpen) {
-            // Composite rgba(0,0,0,0.7) over base — must stay in sync with .modal-overlay alpha.
-            const a = 0.7;
-            r = Math.round(r * (1 - a));
-            g = Math.round(g * (1 - a));
-            b = Math.round(b * (1 - a));
-        }
-        meta.content = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-    }
-
     function openModal(content) {
         if (!modal || !modalBody) return;
         modalBody.innerHTML = content;
@@ -2233,7 +2271,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.documentElement.classList.add('modal-open');
         document.body.classList.add('modal-open');
         document.body.style.top = `-${lockedScrollY}px`;
-        updateThemeColor(true);
 
         // Attach close button handler (now inside modal content)
         const modalClose = modalBody.querySelector('.modal-close');
@@ -2261,7 +2298,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.documentElement.classList.remove('modal-open');
         document.body.classList.remove('modal-open');
         document.body.style.top = '';
-        updateThemeColor(false);
         window.scrollTo(0, lockedScrollY);
         
         // Remove focus trap handler

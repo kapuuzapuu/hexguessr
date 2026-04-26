@@ -819,6 +819,66 @@ html.dark .color-preview {
     margin-top: calc(var(--spacing-xl));
 }
 
+/* Daily load/error takeover.
+   When body.daily-load-active is set, the game content (picker, grid,
+   keyboard, guesses) is hidden and this block fills the main area instead.
+   Header and footer remain visible. */
+.daily-load-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--app-scale) * 1.5);
+    padding: calc(var(--app-scale) * 2) calc(var(--app-scale) * 1);
+    min-height: calc(var(--app-scale) * 18);
+    text-align: center;
+}
+
+.daily-load-state.hidden {
+    display: none;
+}
+
+body.daily-load-active .color-game-section,
+body.daily-load-active .input-section,
+body.daily-load-active .guesses-container {
+    display: none !important;
+}
+
+.daily-load-msg {
+    font-family: var(--ps2p-stack);
+    font-size: calc(var(--app-scale) * 0.85);
+    color: var(--color-primary);
+    line-height: 1.6;
+    max-width: calc(var(--app-scale) * 22);
+}
+
+.daily-retry-btn {
+    background: var(--color-primary);
+    color: var(--color-secondary);
+    border: none;
+    cursor: pointer;
+    font-family: var(--ps2p-stack);
+    font-size: calc(var(--stats-button-font-size) * 1.6);
+    font-weight: bold;
+    padding: var(--stats-button-padding-v) var(--stats-button-padding-h);
+    letter-spacing: var(--stats-button-letter-spacing);
+    box-shadow: var(--shadow-grid-offset) var(--shadow-grid-offset) 0 var(--color-shadow);
+    min-height: calc(var(--app-scale) * 2.2);
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.daily-load-state.is-error .daily-retry-btn {
+    display: inline-flex;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .daily-retry-btn:hover {
+        background: var(--hover-dark);
+    }
+}
+
 .hex-grid-wrapper:focus {
     outline: none;
 }
