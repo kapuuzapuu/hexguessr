@@ -1,25 +1,24 @@
 // --- Start of helper functions ---
 
-// Prevent FOUC: Show body only after fonts load
+// Prevent FOUC: Show body only after fonts load.
+// The opacity rules live in an inline <style> block in index.html so they
+// apply before external CSS arrives — this just adds the class that flips
+// the page to opacity 1 once fonts are ready (or after a 1s safety timeout).
 (function() {
+    const reveal = () => {
+        document.documentElement.classList.add('fonts-loaded');
+    };
     if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => {
-            document.documentElement.classList.add('fonts-loaded');
-            document.body.classList.add('fonts-loaded');
-        });
+        document.fonts.ready.then(reveal);
     } else {
         // Fallback for browsers without Font Loading API
-        window.addEventListener('load', () => {
-            document.documentElement.classList.add('fonts-loaded');
-            document.body.classList.add('fonts-loaded');
-        });
+        window.addEventListener('load', reveal);
     }
-    
+
     // Timeout fallback: show content after 1s regardless of font status
     setTimeout(() => {
-        if (!document.body.classList.contains('fonts-loaded')) {
-            document.documentElement.classList.add('fonts-loaded');
-            document.body.classList.add('fonts-loaded');
+        if (!document.documentElement.classList.contains('fonts-loaded')) {
+            reveal();
         }
     }, 1000);
 })();

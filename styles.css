@@ -239,13 +239,7 @@ html.dark {
 html {
     background: var(--color-page-bg);
     box-sizing: border-box;
-    opacity: 0;
-    transition: opacity 0.1s ease-in;
     overflow-x: hidden;
-}
-
-html.fonts-loaded {
-    opacity: 1;
 }
 
 *,
@@ -261,13 +255,6 @@ body {
     background: var(--color-page-bg);
     color: var(--color-primary);
     overflow-x: hidden;
-    
-    opacity: 0;
-    transition: opacity 0.1s ease-in;
-}
-
-body.fonts-loaded {
-    opacity: 1;
 }
 
 html.modal-open,

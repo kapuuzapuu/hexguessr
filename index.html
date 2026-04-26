@@ -57,6 +57,16 @@
             document.documentElement.style.colorScheme = shouldBeDark ? 'dark' : 'light';
         })();
     </script>
+
+    <!-- FOUC prevention: opacity rules inlined so they apply before the
+         external stylesheet loads. Without this, the browser can paint the
+         page once before styles.css arrives and again when JS reveals it,
+         producing a visible flash. The .fonts-loaded class is added by JS
+         in app.js once fonts are ready (or after a 1s timeout). -->
+    <style>
+        html { opacity: 0; transition: opacity 0.1s ease-in; }
+        html.fonts-loaded { opacity: 1; }
+    </style>
     
     <!-- Favicons -->
     <link rel="icon" href="/favicon.ico">
