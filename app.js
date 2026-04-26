@@ -2483,14 +2483,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!hasSeenOnboardingHelp && !hasGameplaySaveData) {
         const autoChannel = 'onboardingHelpAuto';
         autoPopupBypassState[autoChannel].pending = true;
-        // Small delay so the first-load modal feels less abrupt.
-        setTimeout(() => {
+        // Anchor the popup to when the page is visually ready (fonts loaded),
+        // not DOMContentLoaded — otherwise the perceived delay varies wildly
+        // with cache state. Same primitive the FOUC handler already uses.
+        const triggerHelpPopup = () => setTimeout(() => {
             autoPopupBypassState[autoChannel].pending = false;
             if (shouldSuppressAutoPopup(autoChannel)) return;
             if (!document.body.classList.contains('modal-open')) {
                 openHelpModal();
             }
-        }, 1000);
+        }, 1250);
+        if (document.documentElement.classList.contains('fonts-loaded')) {
+            triggerHelpPopup();
+        } else {
+            // Race fonts.ready against a safety cap that matches the FOUC
+            // handler's fallback — if fonts hang, the page becomes visible
+            // anyway at ~1s, so we shouldn't wait longer than that.
+            const fontsReady = (document.fonts && document.fonts.ready) || Promise.resolve();
+            const safetyCap = new Promise(resolve => setTimeout(resolve, 1500));
+            Promise.race([fontsReady, safetyCap]).then(triggerHelpPopup);
+        }
     }
 
     // Stats button
