@@ -180,6 +180,7 @@ class HexColorWordle {
         // Document-level paste listener as fallback (catches paste even when grid isn't focused)
         document.addEventListener('paste', (e) => {
             // Only handle if we're not in an input field and game is active
+            if (document.body.classList.contains('daily-load-active')) return;
             const active = document.activeElement;
             const isInInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
             if (!isInInput && active !== this.gridEl && !this.gameOver && !this.isAnimating) {
@@ -308,6 +309,9 @@ class HexColorWordle {
         if (this.gameOver || this.isAnimating) return;
         // Never process game input while modal is open
         if (document.body.classList.contains('modal-open')) return;
+        // Never process game input while the daily error overlay is showing
+        // (the grid is display:none but the document keydown listener still fires).
+        if (document.body.classList.contains('daily-load-active')) return;
         // accept input anywhere; if user is typing in another field, ignore
         const active = document.activeElement;
         const isTypingInInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
@@ -1229,8 +1233,6 @@ class HexColorWordle {
     showColor() {
         // Prevent reveal during row-reveal animation/settle window so attempt timing stays correct.
         if (this.colorVisible || this.gameOver || this.hasRevealedThisAttempt || this.isAnimating) return;
-        // Daily mode: nothing to reveal until the target lands.
-        if (this.mode === 'daily' && !this.targetColor) return;
                 
         this.colorVisible = true;
         this.hasRevealedThisAttempt = true;
@@ -1277,13 +1279,6 @@ class HexColorWordle {
         if (this.gameOver || this.isAnimating) return;
         // Block submission if modal is open
         if (document.body.classList.contains('modal-open')) return;
-        // Daily mode: target color may not have arrived yet (network in flight)
-        if (this.mode === 'daily' && !this.targetColor) {
-            if (typeof window.showToast === 'function') {
-                window.showToast("Loading today's puzzle…");
-            }
-            return;
-        }
         // Do not allow guesses while the reveal timer is active
         if (this.colorVisible) {
             this.showWaitForRevealNotification();
@@ -1987,7 +1982,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
         gameInstance = new HexColorWordle({ mode: 'daily', targetColor: null });
         if (!gameInstance.targetColor) {
-            // No saved state restored a target — go to the network.
+            // No saved state restored a target — hide the page until the
+            // first-of-day fetch resolves, so the user sees a clean theme-bg
+            // splash instead of an unusable game shell.
+            document.body.classList.add('daily-blank-active');
             attemptDailyFetch();
         }
     }
@@ -2003,6 +2001,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     function setDailyLoadState(kind) {
         if (!dailyLoadEl) return;
         dailyLoadEl.classList.remove('hidden', 'is-error');
+        // Both terminal states (error + success) clear the initial blank.
+        document.body.classList.remove('daily-blank-active');
         if (kind === 'error') {
             dailyLoadEl.classList.add('is-error');
             if (dailyLoadMsg) dailyLoadMsg.textContent = "Couldn't load today's mystery color.";
@@ -2024,10 +2024,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (dailyRetryBtn) {
-        dailyRetryBtn.addEventListener('click', () => {
-            if (gameInstance.targetColor) { setDailyLoadState(null); return; }
-            attemptDailyFetch();
-        });
+        dailyRetryBtn.addEventListener('click', () => location.reload());
     }
 
     // --- Mode buttons: navigate correctly in both environments ---

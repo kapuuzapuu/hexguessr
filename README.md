@@ -57,13 +57,13 @@ Each character gets one of four colored feedback states:
 
 ### 1) Quick frontend-only run
 
-This is enough for UI work. If `/api/daily-color` is unavailable, the app gracefully falls back to `Unlimited` mode.
+This is enough for UI work on `Unlimited` mode — visit `/unlimited` directly. `Daily` mode requires a successful response from `/api/daily-color`; without it, you'll see the "couldn't load today's mystery color" error screen with a retry button. For Daily-mode UI work, use option 2 below.
 
 ```bash
 python3 -m http.server 8787
 ```
 
-Open: `http://localhost:8787`
+Open: `http://localhost:8787/unlimited`
 
 ### 2) Run with Daily API locally (Cloudflare Pages Functions)
 

@@ -844,6 +844,14 @@ body.daily-load-active .guesses-container {
     display: none !important;
 }
 
+/* Initial blank-page state for daily mode while the first-of-day fetch is
+   in flight. Hides everything so the user sees only the theme bg color
+   (already painted by the inline dark-mode init script). */
+body.daily-blank-active .layout-container,
+body.daily-blank-active .site-footer {
+    display: none !important;
+}
+
 .daily-load-msg {
     font-family: var(--ps2p-stack);
     font-size: calc(var(--app-scale) * 0.85);
