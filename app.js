@@ -1963,6 +1963,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', queueHexOutputScaleSync, { passive: true });
     }
+    // Re-sync after fonts settle — the initial DOMContentLoaded calc can run
+    // before fallback fonts have given way to Press Start 2P / IBM Plex Mono,
+    // and the resulting layout shift (incl. transient scrollbar visibility)
+    // can lock in a slightly-too-small scale value. fonts.ready resolves once
+    // the layout has been applied with the final fonts.
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(queueHexOutputScaleSync);
+    }
+    // Safety fallback in case fonts.ready never resolves (edge case).
+    setTimeout(queueHexOutputScaleSync, 1000);
 
     // --- Decide mode (path vs local file query) ---
     const isFile = location.protocol === 'file:';
