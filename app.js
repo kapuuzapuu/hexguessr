@@ -1566,7 +1566,7 @@ class HexColorWordle {
                 'Splendid!',
                 'Great job!',
                 'Well done!',
-                'Perfect!',
+                'Amazing!',
                 'Brilliant!',
                 'Outstanding!',
                 'Excellent!',
