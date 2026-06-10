@@ -369,6 +369,8 @@ body.modal-open .layout-container {
     font-size: var(--ascii-font-size);
     cursor: pointer;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     transition: opacity 0.2s ease;
     text-rendering: optimizeSpeed;
     letter-spacing: -0.02em;
@@ -722,6 +724,8 @@ html.dark .color-preview {
     font-size: var(--hex-output-focus-font-size);
     color: var(--color-primary);
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     pointer-events: none;
     z-index: 2;
 }
@@ -919,6 +923,8 @@ body.daily-blank-active .site-footer {
     color: var(--color-primary);
     font-size: var(--grid-cell-font-size);
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     text-transform: uppercase;
     box-shadow: var(--shadow-grid-offset) var(--shadow-grid-offset) 0 var(--color-shadow);
     position: relative;
@@ -1014,6 +1020,8 @@ body.daily-blank-active .site-footer {
     justify-content: center;
     font-size: var(--row-label-font-size);
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     visibility: hidden;
     text-shadow: var(--shadow-grid-offset) var(--shadow-grid-offset) 0 var(--color-shadow);
     padding-top: var(--spacing-sm);
@@ -1116,6 +1124,8 @@ html.dark .row-label.colored {
     align-items: center;
     justify-content: center;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     text-transform: uppercase;
     box-shadow: var(--shadow-key-offset) var(--shadow-key-offset) 0 var(--color-shadow);
 }
