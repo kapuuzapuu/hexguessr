@@ -582,6 +582,9 @@ html.dark .color-display.disabled {
     cursor: pointer;
     position: relative;
     background: linear-gradient(to right, #fff, #f00);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     /* remove old flex values */
     /* flex: 0 0 var(--color-canvas-size); */
     /* flex-shrink: 0; */
@@ -619,6 +622,9 @@ html.dark .color-display.disabled {
         #0ff 50%, #00f 66.66%, #f0f 83.33%, #f00 100%);
     position: relative;
     cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 
     /* remove flex-based sizing */
     /* flex-shrink: 0; */
@@ -688,6 +694,9 @@ html.dark .hue-slider {
     flex: 0 0 var(--color-display-height);     /* don’t grow/shrink */
     margin: 0 auto;
     box-shadow: var(--shadow-body-offset) var(--shadow-body-offset) 0 var(--color-shadow);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 html.dark .color-preview {
@@ -751,11 +760,11 @@ html.dark .color-preview {
 .hex-copy-btn {
     position: absolute;
     top: 50%;
-    right: 0;
+    right: -2px;
     transform: translateY(-50%);
-    width: var(--hex-output-height);
+    width: calc(var(--hex-output-height) + 2px);
     height: var(--hex-output-height);
-    padding: 0;
+    padding: 0 2px 0 0;
 
     /* kill the native button look */
     background: transparent;
