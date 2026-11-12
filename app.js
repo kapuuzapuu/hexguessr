@@ -1117,8 +1117,9 @@ class HexColorWordle {
             h /= 6;
         }
 
-        // Update internal state
-        this.currentHue        = h * 360;
+        // Update internal state. Greys (incl. black/white) have no hue, so keep
+        // the previous one instead of snapping the hue strip back to red.
+        if (delta !== 0) this.currentHue = h * 360;
         this.currentSaturation = s;
         this.currentValue      = v;
 
