@@ -124,6 +124,27 @@ function shouldSuppressAutoPopup(channel) {
     return false;
 }
 
+/**
+ * Copies text into the clipboard, falls back to using execCommand when the navigator api is not available
+ * @param {string} text The text to copy
+ * @throws {NotAllowedError | DOMException}
+ */
+async function safeCopy(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        try { ta.focus({ preventScroll: true }); } catch { ta.focus(); }
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+}
+
 class HexColorWordle {
     constructor(opts = {}) {
         this.mode = opts.mode || 'unlimited';
@@ -436,19 +457,7 @@ class HexColorWordle {
         const text = this.buildShareResultsText();
 
         try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(text);
-            } else {
-                const ta = document.createElement('textarea');
-                ta.value = text;
-                ta.style.position = 'fixed';
-                ta.style.opacity = '0';
-                document.body.appendChild(ta);
-                try { ta.focus({ preventScroll: true }); } catch { ta.focus(); }
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-            }
+            await safeCopy(text);
 
             if (typeof window.showToast === 'function') {
                 window.showToast('Game results copied!');
@@ -967,19 +976,7 @@ class HexColorWordle {
             const text = hexValue.startsWith('#') ? hexValue : ('#' + hexValue);
 
             try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(text);
-                } else {
-                    const ta = document.createElement('textarea');
-                    ta.value = text;
-                    ta.style.position = 'fixed';
-                    ta.style.opacity = '0';
-                    document.body.appendChild(ta);
-                    try { ta.focus({ preventScroll: true }); } catch { ta.focus(); }
-                    ta.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(ta);
-                }
+                await safeCopy(text);
                 if (typeof window.showToast === 'function') window.showToast('Copied!');
             } catch {
                 if (typeof window.showToast === 'function') window.showToast('Press ⌘C / Ctrl+C');
