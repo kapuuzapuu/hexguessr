@@ -124,24 +124,36 @@ function shouldSuppressAutoPopup(channel) {
     return false;
 }
 
+// Storage can throw (Safari "block all cookies", disabled site data, quota).
+// Degrade to "no saved state" instead of crashing the game.
+const safeStorage = {
+    get(key)        { try { return localStorage.getItem(key); } catch { return null; } },
+    set(key, value) { try { localStorage.setItem(key, value); return true; } catch { return false; } },
+    remove(key)     { try { localStorage.removeItem(key); } catch {} },
+};
+
 /**
- * Copies text into the clipboard, falls back to using execCommand when the navigator api is not available
+ * Copies text to the clipboard, falling back to execCommand when the
+ * async Clipboard API is unavailable (old browsers, non-secure contexts).
  * @param {string} text The text to copy
- * @throws {NotAllowedError | DOMException}
+ * @throws {DOMException|Error} If the copy fails
  */
 async function safeCopy(text) {
     if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
-    } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
+        return;
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    try {
         try { ta.focus({ preventScroll: true }); } catch { ta.focus(); }
         ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
+        if (!document.execCommand('copy')) throw new Error('Copy command failed');
+    } finally {
+        ta.remove();
     }
 }
 
@@ -739,43 +751,36 @@ class HexColorWordle {
             this.hueSlider.classList.remove('touch-active');
         };
 
-        // Detect touch-capable devices
-        const isTouchDevice =
-            ('ontouchstart' in window) ||
-            (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
-            (navigator.msMaxTouchPoints && navigator.msMaxTouchPoints > 0);
-
-        // ----- MOUSE: desktop / non-touch only -----
-        if (!isTouchDevice) {
-            this.colorCanvas.addEventListener('mousedown', (e) => {
-                isDraggingCanvas = true;
+        // ----- MOUSE: Pointer Events, keyed on the actual pointer in use -----
+        // Previously gated on "is this a touch-capable device", which meant a mouse
+        // on a touchscreen laptop got no listeners at all. Pointer Events report
+        // pointerType per event, so only a real mouse is handled here; touch and
+        // stylus/pen go through the tap-to-arm code below.
+        // setPointerCapture keeps tracking when the pointer leaves the element.
+        const bindPointerDrag = (el, update) => {
+            let dragging = false;
+            el.addEventListener('pointerdown', (e) => {
+                if (e.pointerType !== 'mouse') return; // touch/pen → tap-to-arm path
+                if (e.button !== 0) return;            // primary button only
+                dragging = true;
+                el.setPointerCapture(e.pointerId);
                 startDrag();
-                this.updateCanvasPosition(e);
+                update(e);
             });
+            el.addEventListener('pointermove', (e) => { if (dragging) update(e); });
+            const stop = (e) => {
+                if (!dragging) return;
+                dragging = false;
+                try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+                endDrag();
+            };
+            el.addEventListener('pointerup', stop);
+            el.addEventListener('pointercancel', stop);
+            el.addEventListener('lostpointercapture', stop);
+        };
 
-            this.hueSlider.addEventListener('mousedown', (e) => {
-                isDraggingHue = true;
-                startDrag();
-                this.updateHuePosition(e);
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (isDraggingCanvas) {
-                    this.updateCanvasPosition(e);
-                }
-                if (isDraggingHue) {
-                    this.updateHuePosition(e);
-                }
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (isDraggingCanvas || isDraggingHue) {
-                    isDraggingCanvas = false;
-                    isDraggingHue = false;
-                    endDrag();
-                }
-            });
-        }
+        bindPointerDrag(this.colorCanvas, (e) => this.updateCanvasPosition(e));
+        bindPointerDrag(this.hueSlider,   (e) => this.updateHuePosition(e));
 
         // ----- TOUCH: tap to arm, second gesture to drag -----
 
@@ -979,7 +984,7 @@ class HexColorWordle {
                 await safeCopy(text);
                 if (typeof window.showToast === 'function') window.showToast('Copied!');
             } catch {
-                if (typeof window.showToast === 'function') window.showToast('Press ⌘C / Ctrl+C');
+                if (typeof window.showToast === 'function') window.showToast('Clipboard access failed');
             }
         });
 
@@ -1593,8 +1598,14 @@ class HexColorWordle {
 
     updateGameStats(won) {
         const storageKey = `gameStats_${this.mode}`;
-        const savedStats = localStorage.getItem(storageKey);
-        let stats = savedStats ? JSON.parse(savedStats) : {
+        const savedStats = safeStorage.get(storageKey);
+        // Saved data is untrusted (hand-edited, extensions): if it doesn't parse
+        // to an object, start over with the same defaults a fresh player gets.
+        let stats = null;
+        if (savedStats) {
+            try { stats = JSON.parse(savedStats); } catch { stats = null; }
+        }
+        if (!stats || typeof stats !== 'object') stats = {
             gamesPlayed: 0,
             gamesWon: 0,
             gamesLost: 0,
@@ -1632,7 +1643,7 @@ class HexColorWordle {
             stats.totalErrorReduction += reduction; // Allow negative values
         }
 
-        localStorage.setItem(storageKey, JSON.stringify(stats));
+        safeStorage.set(storageKey, JSON.stringify(stats));
     }
 
     calculateColorError(guess, target) {
@@ -1708,7 +1719,7 @@ class HexColorWordle {
 
     checkDailyCompletion() {
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        const saved = localStorage.getItem('dailyCompletion');
+        const saved = safeStorage.get('dailyCompletion');
         
         if (!saved) return { completed: false };
         
@@ -1725,7 +1736,7 @@ class HexColorWordle {
 
     saveDailyCompletion(won) {
         const puzzleDate = this.dailyPuzzleDate || new Date().toISOString().split('T')[0];
-        localStorage.setItem('dailyCompletion', JSON.stringify({
+        safeStorage.set('dailyCompletion', JSON.stringify({
             date: puzzleDate,
             won: won
         }));
@@ -1769,13 +1780,13 @@ class HexColorWordle {
             gameState.gridState.push(rowState);
         }
         
-        localStorage.setItem('dailyGameState', JSON.stringify(gameState));
+        safeStorage.set('dailyGameState', JSON.stringify(gameState));
     }
     
     loadDailyGameState() {
         if (this.mode !== 'daily') return;
         
-        const saved = localStorage.getItem('dailyGameState');
+        const saved = safeStorage.get('dailyGameState');
         if (!saved) return;
         
         try {
@@ -1785,7 +1796,7 @@ class HexColorWordle {
             
             // Only restore if it's today's game
             if (savedPuzzleDate !== today) {
-                localStorage.removeItem('dailyGameState');
+                safeStorage.remove('dailyGameState');
                 return;
             }
             
@@ -1918,7 +1929,7 @@ class HexColorWordle {
             }
         } catch (e) {
             console.error('Failed to load daily game state:', e);
-            localStorage.removeItem('dailyGameState');
+            safeStorage.remove('dailyGameState');
         }
     }
 }
@@ -2075,7 +2086,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
             
             // Save preference to localStorage
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            safeStorage.set('theme', isDark ? 'dark' : 'light');
 
             // Update aria-label
             darkModeBtn.setAttribute("aria-label", isDark ? "Light Mode" : "Dark Mode");
@@ -2462,7 +2473,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 </div>
         `;
         openModal(helpContent);
-        localStorage.setItem('onboardingHelpSeen', '1');
+        safeStorage.set('onboardingHelpSeen', '1');
     }
 
     // Info/Help button
@@ -2478,12 +2489,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Show onboarding help once for first-time users (no gameplay save data yet).
     const onboardingHelpSeenKey = 'onboardingHelpSeen';
-    const hasSeenOnboardingHelp = localStorage.getItem(onboardingHelpSeenKey) === '1';
+    const hasSeenOnboardingHelp = safeStorage.get(onboardingHelpSeenKey) === '1';
     const hasGameplaySaveData = (
-        localStorage.getItem('dailyGameState') ||
-        localStorage.getItem('dailyCompletion') ||
-        localStorage.getItem('gameStats_daily') ||
-        localStorage.getItem('gameStats_unlimited')
+        safeStorage.get('dailyGameState') ||
+        safeStorage.get('dailyCompletion') ||
+        safeStorage.get('gameStats_daily') ||
+        safeStorage.get('gameStats_unlimited')
     );
     if (!hasSeenOnboardingHelp && !hasGameplaySaveData) {
         const autoChannel = 'onboardingHelpAuto';
@@ -2773,7 +2784,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         const storageKey = `gameStats_${mode}`;
-        const savedStats = localStorage.getItem(storageKey);
+        const savedStats = safeStorage.get(storageKey);
         const defaultStats = {
             gamesPlayed: 0,
             gamesWon: 0,
@@ -2845,7 +2856,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     function saveStats(stats, mode = 'daily') {
         const storageKey = `gameStats_${mode}`;
-        localStorage.setItem(storageKey, JSON.stringify(stats));
+        safeStorage.set(storageKey, JSON.stringify(stats));
     }
 
     window.closeModalAndPlay = function() {

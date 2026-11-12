@@ -27,8 +27,10 @@
     <!-- Dark mode init: runs immediately to prevent flash -->
     <script>
         (function() {
-            // Check localStorage first
-            const savedTheme = localStorage.getItem('theme');
+            // Check localStorage first (access can throw when storage is blocked,
+            // e.g. Safari "Block all cookies" — fall back to system preference)
+            let savedTheme = null;
+            try { savedTheme = localStorage.getItem('theme'); } catch (e) {}
             
             let shouldBeDark = false;
             
@@ -44,7 +46,7 @@
                 // If can't detect or is light, shouldBeDark stays false (default light)
                 
                 // Save the detected preference so it persists across mode switches
-                localStorage.setItem('theme', shouldBeDark ? 'dark' : 'light');
+                try { localStorage.setItem('theme', shouldBeDark ? 'dark' : 'light'); } catch (e) {}
             }
             
             if (shouldBeDark) {
